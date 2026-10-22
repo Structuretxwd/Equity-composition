@@ -1,0 +1,218 @@
+/* 全局主题：页面、卡片、图表颜色全部跟随 Arco 的 body[arco-theme] 切换 */
+:root {
+  --chart-1: #165dff;
+  --chart-2: #00b42a;
+  --chart-3: #722ed1;
+  --chart-4: #ff7d00;
+  --chart-5: #f53f3f;
+  --chart-6: #14c9c9;
+  --chart-7: #86909c;
+}
+
+body[arco-theme='dark'] {
+  --chart-1: #4080ff;
+  --chart-2: #23c343;
+  --chart-3: #8d4eda;
+  --chart-4: #ff9a2e;
+  --chart-5: #f76560;
+  --chart-6: #37d4cf;
+  --chart-7: #6b7785;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg-1);
+  color: var(--color-text-1);
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.app-shell {
+  height: 100vh;
+  overflow: hidden;
+  background: var(--color-bg-1);
+}
+
+.app-sider {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-2) !important;
+  border-right: 1px solid var(--color-border-2);
+}
+
+.app-logo {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.app-logo-badge {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(var(--primary-6));
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.app-nav {
+  flex: 1;
+  border-right: none !important;
+  background: transparent !important;
+}
+
+.app-content {
+  overflow: auto;
+  padding: 24px;
+  background: var(--color-bg-1);
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.page-title {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-text-1);
+}
+
+.page-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-2);
+}
+
+.panel {
+  padding: 20px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 12px;
+  background: var(--color-bg-2);
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 16px;
+}
+
+@media (max-width: 1100px) {
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chart-panel-title {
+  margin: 0 0 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  background: var(--color-bg-1);
+}
+
+.login-card {
+  width: 400px;
+  max-width: 100%;
+  padding: 32px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 16px;
+  background: var(--color-bg-2);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.login-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.muted {
+  color: var(--color-text-3);
+}
+
+.round-list {
+  display: grid;
+  gap: 16px;
+}
+
+.round-participants {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.round-participant {
+  display: grid;
+  grid-template-columns: minmax(100px, 160px) minmax(0, 1fr) 72px;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.simulator-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 20px;
+}
+
+.audit-json {
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--color-fill-2);
+  color: var(--color-text-2);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

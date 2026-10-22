@@ -1,0 +1,141 @@
+// 股权管理系统数据模型：RBAC、股东、融资轮次、持股、轮次快照与审计日志
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum ShareholderType {
+  FOUNDER
+  INVESTOR
+  NEW_SHAREHOLDER
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  name          String
+  isActive      Boolean  @default(true)
+  roleId        String
+  shareholderId String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  role        Role         @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  shareholder Shareholder? @relation(fields: [shareholderId], references: [id], onDelete: SetNull)
+  auditLogs   AuditLog[]   @relation("AuditActor")
+
+  @@index([roleId])
+}
+
+model Role {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String @id @default(cuid())
+  key         String @unique
+  description String
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model Shareholder {
+  id            String          @id @default(cuid())
+  name          String
+  type          ShareholderType
+  initialShares Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  holdings  ShareHolding[]
+  snapshots CapTableSnapshot[]
+  user      User?
+  auditLogs AuditLog[]        @relation("AuditSubject")
+}
+
+model FundingRound {
+  id                   String   @id @default(cuid())
+  name                 String   @unique
+  date                 DateTime
+  totalDilutionPercent Decimal  @db.Decimal(9, 6)
+  investorProtection   Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  holdings  ShareHolding[]
+  snapshots CapTableSnapshot[]
+
+  @@index([date])
+}
+
+model ShareHolding {
+  id              String   @id @default(cuid())
+  shareholderId   String
+  fundingRoundId  String
+  sharesPercent   Decimal  @db.Decimal(9, 6)
+  dilutionApplied Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  shareholder  Shareholder  @relation(fields: [shareholderId], references: [id], onDelete: Cascade)
+  fundingRound FundingRound @relation(fields: [fundingRoundId], references: [id], onDelete: Cascade)
+
+  @@unique([shareholderId, fundingRoundId])
+  @@index([fundingRoundId])
+}
+
+model CapTableSnapshot {
+  id               String   @id @default(cuid())
+  roundId          String
+  shareholderId    String
+  postRoundPercent Decimal  @db.Decimal(9, 6)
+  createdAt        DateTime @default(now())
+
+  round       FundingRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  shareholder Shareholder  @relation(fields: [shareholderId], references: [id], onDelete: Cascade)
+
+  @@unique([roundId, shareholderId])
+  @@index([shareholderId])
+  @@index([roundId])
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  userId        String
+  action        String
+  entity        String
+  entityId      String?
+  shareholderId String?
+  beforeJson    Json?
+  afterJson     Json?
+  ip            String?
+  timestamp     DateTime @default(now())
+
+  user        User         @relation("AuditActor", fields: [userId], references: [id], onDelete: Restrict)
+  shareholder Shareholder? @relation("AuditSubject", fields: [shareholderId], references: [id], onDelete: SetNull)
+
+  @@index([timestamp])
+  @@index([shareholderId])
+  @@index([entity, entityId])
+}
