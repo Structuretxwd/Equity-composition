@@ -1,4 +1,4 @@
-// 当前股权分布饼图：颜色通过 CSS 变量自动适配 Arco 深浅色主题
+// 当前股权分布环形图：颜色使用 CSS 变量，自动适配 Arco 深浅色主题。
 'use client';
 
 import { Empty } from '@arco-design/web-react';
@@ -29,23 +29,17 @@ const PIE_COLORS = [
 
 export function EquityPieChart({
   data,
-  height = 360,
+  height = 340,
 }: {
   data: EquityPieDatum[];
   height?: number;
 }) {
-  const total = data.reduce((sum, item) => sum + item.value, 0);
+  const visible = data.filter((item) => item.value > 0);
+  const total = visible.reduce((sum, item) => sum + item.value, 0);
 
-  if (data.length === 0 || total <= 0) {
+  if (visible.length === 0 || total <= 0) {
     return (
-      <div
-        style={{
-          height,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+      <div className="empty-box" style={{ height }}>
         <Empty description="暂无股权数据" />
       </div>
     );
@@ -55,18 +49,18 @@ export function EquityPieChart({
     <ResponsiveContainer width="100%" height={height}>
       <PieChart>
         <Pie
-          data={data}
+          data={visible}
           dataKey="value"
           nameKey="name"
           cx="50%"
-          cy="50%"
-          innerRadius="52%"
+          cy="46%"
+          innerRadius="54%"
           outerRadius="78%"
           paddingAngle={2}
           stroke="var(--color-bg-2)"
           strokeWidth={1}
         >
-          {data.map((entry, index) => (
+          {visible.map((entry, index) => (
             <Cell
               key={`${entry.name}-${index}`}
               fill={PIE_COLORS[index % PIE_COLORS.length]}
@@ -74,9 +68,7 @@ export function EquityPieChart({
           ))}
         </Pie>
         <Tooltip
-          formatter={(value: number | string | Array<number | string>) =>
-            `${Number(value).toFixed(2)}%`
-          }
+          formatter={(value) => `${Number(value).toFixed(2)}%`}
           contentStyle={{
             background: 'var(--color-bg-2)',
             border: '1px solid var(--color-border-2)',
@@ -87,10 +79,9 @@ export function EquityPieChart({
         />
         <Legend
           iconType="circle"
+          wrapperStyle={{ fontSize: 12 }}
           formatter={(value) => (
-            <span style={{ color: 'var(--color-text-2)', fontSize: 12 }}>
-              {String(value)}
-            </span>
+            <span style={{ color: 'var(--color-text-2)', fontSize: 12 }}>{String(value)}</span>
           )}
         />
       </PieChart>

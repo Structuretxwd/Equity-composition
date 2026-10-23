@@ -1,44 +1,33 @@
 {
   "name": "equity-composition",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
+  "description": "纯静态股权管理系统：Next.js 静态导出 + sql.js + IndexedDB + Arco Design",
   "engines": {
     "node": "20.x"
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
-    "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy",
-    "db:seed": "prisma db seed",
-    "postinstall": "prisma generate"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "predev": "node scripts/copy-wasm.mjs",
+    "build": "next build",
+    "prebuild": "node scripts/copy-wasm.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@antv/g6": "^4.8.24",
-    "@arco-design/web-react": "^2.66.1",
-    "@prisma/client": "^5.22.0",
-    "bcryptjs": "^2.4.3",
-    "jose": "^5.9.6",
+    "@antv/g6": "^4.8.25",
+    "@arco-design/web-react": "^2.66.18",
+    "@motioneffector/sql": "^1.0.1",
     "next": "14.2.35",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "recharts": "^2.13.3",
-    "zod": "^3.23.8"
+    "recharts": "^2.15.4",
+    "sql.js": "^1.15.1"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.17.9",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "prisma": "^5.22.0",
-    "tsx": "^4.19.2",
+    "@types/sql.js": "^1.4.11",
     "typescript": "^5.7.2"
   }
 }

@@ -1,24 +1,16 @@
-// 业务页面布局：服务端读取会话后，将“可见菜单”下发给客户端外壳
-import { requirePageUser } from '@/lib/auth';
-import { getAllowedNavPaths } from '@/lib/navigation';
+// 工作台布局：客户端路由守卫 → 数据库初始化 → 应用外壳。
+'use client';
+
 import { AppShell } from '@/components/AppShell';
+import { DbProvider } from '@/components/DbProvider';
+import { RouteGuard } from '@/components/RouteGuard';
 
-export default async function DashboardLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
-  const user = await requirePageUser();
-
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AppShell
-      user={{
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        shareholderName: user.shareholderName,
-      }}
-      allowedPaths={getAllowedNavPaths(user)}
-    >
-      {children}
-    </AppShell>
+    <RouteGuard>
+      <DbProvider>
+        <AppShell>{children}</AppShell>
+      </DbProvider>
+    </RouteGuard>
   );
 }

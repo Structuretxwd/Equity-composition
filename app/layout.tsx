@@ -1,18 +1,23 @@
-// 根布局：引入 Arco 样式、在 body 起始处恢复主题，并用 ConfigProvider 包裹应用
-import type { Metadata } from 'next';
+// 根布局：引入 Arco 样式与全局主题脚本，不包含任何服务端依赖。
+import type { Metadata, Viewport } from 'next';
 import '@arco-design/web-react/dist/css/arco.css';
 import './globals.css';
-import { Providers } from './providers';
+import { Providers } from '@/components/Providers';
 import { ThemeScript } from '@/components/ThemeScript';
 
 export const metadata: Metadata = {
-  title: '股权管理系统',
-  description: '面向创始团队与投资人的股权结构、融资轮次与稀释模拟管理平台',
+  title: '股权管理系统 · Cap Table',
+  description:
+    '纯静态股权管理系统：股东名册、融资轮次、结构可视化、稀释模拟与本地数据库备份。',
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#165DFF',
+};
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body>

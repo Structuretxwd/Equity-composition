@@ -1,67 +1,82 @@
-// 认证服务：读取数据库角色/权限，供页面与 API 二次校验使用
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
-import bcrypt from 'bcryptjs';
-import type { Prisma } from '@prisma/client';
-import { prisma } from './prisma';
-import { SESSION_COOKIE, verifySession } from './session';
-import type { SessionUser } from './rbac';
+// 浏览器端认证：SHA-256 密码哈希比对 + sessionStorage 会话。
+// 哈希可在构建时通过 NEXT_PUBLIC_*_PASSWORD_HASH 注入；未注入时使用演示密码。
+import { createSession, writeSession } from './session';
+import type { Role, SessionUser } from './types';
 
-const userWithAccess = {
-  role: {
-    include: {
-      permissions: {
-        include: { permission: true },
-      },
-    },
+const DEFAULT_PASSWORD_HASHES: Record<Role, string> = {
+  ADMIN: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', // admin123
+  PARTNER: 'd4e870198339c045e84f416cc6a1f15c30f010f68e14c637a9d35366f2e35ba6', // partner123
+  INVESTOR: '4f841b0d8d0c53395802c1588be3b15c0f26336a019b93a98a03bce1ad693d8e', // investor123
+};
+
+const PASSWORD_HASHES: Record<Role, string> = {
+  ADMIN: process.env.NEXT_PUBLIC_ADMIN_PASSWORD_HASH?.trim() || DEFAULT_PASSWORD_HASHES.ADMIN,
+  PARTNER:
+    process.env.NEXT_PUBLIC_PARTNER_PASSWORD_HASH?.trim() || DEFAULT_PASSWORD_HASHES.PARTNER,
+  INVESTOR:
+    process.env.NEXT_PUBLIC_INVESTOR_PASSWORD_HASH?.trim() || DEFAULT_PASSWORD_HASHES.INVESTOR,
+};
+
+const CUSTOM_HASH_CONFIGURED = Boolean(
+  process.env.NEXT_PUBLIC_ADMIN_PASSWORD_HASH ||
+    process.env.NEXT_PUBLIC_PARTNER_PASSWORD_HASH ||
+    process.env.NEXT_PUBLIC_INVESTOR_PASSWORD_HASH,
+);
+
+export const DEMO_MODE =
+  process.env.NEXT_PUBLIC_DEMO_MODE === 'false' ? false : !CUSTOM_HASH_CONFIGURED;
+
+export const DEMO_PASSWORDS: Record<Role, string> = {
+  ADMIN: 'admin123',
+  PARTNER: 'partner123',
+  INVESTOR: 'investor123',
+};
+
+export type RoleAccount = {
+  role: Role;
+  name: string;
+  shareholderId: string | null;
+  shareholderName: string | null;
+};
+
+export const ROLE_ACCOUNTS: Record<Role, RoleAccount> = {
+  ADMIN: {
+    role: 'ADMIN',
+    name: '系统管理员',
+    shareholderId: null,
+    shareholderName: null,
   },
-  shareholder: { select: { id: true, name: true } },
-} satisfies Prisma.UserInclude;
+  PARTNER: {
+    role: 'PARTNER',
+    name: '李岚',
+    shareholderId: 'sh-founder-li',
+    shareholderName: '李岚',
+  },
+  INVESTOR: {
+    role: 'INVESTOR',
+    name: '陈默',
+    shareholderId: 'sh-investor-chen',
+    shareholderName: '陈默',
+  },
+};
 
-type UserWithAccess = Prisma.UserGetPayload<{ include: typeof userWithAccess }>;
-
-function toSessionUser(user: UserWithAccess): SessionUser {
-  return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: user.role.name,
-    permissions: user.role.permissions.map((item) => item.permission.key),
-    shareholderId: user.shareholderId,
-    shareholderName: user.shareholder?.name ?? null,
-  };
+async function sha256Hex(value: string): Promise<string> {
+  const data = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
 }
 
-export async function authenticate(email: string, password: string): Promise<SessionUser | null> {
-  const user = await prisma.user.findUnique({
-    where: { email: email.trim().toLowerCase() },
-    include: userWithAccess,
-  });
+/** 校验角色密码；成功时写入 sessionStorage 并返回会话 */
+export async function signIn(role: Role, password: string): Promise<SessionUser> {
+  const hash = await sha256Hex(password);
+  if (hash !== PASSWORD_HASHES[role]) {
+    throw new Error('密码不正确，请重试');
+  }
 
-  if (!user || !user.isActive) return null;
-
-  const passwordMatched = await bcrypt.compare(password, user.passwordHash);
-  return passwordMatched ? toSessionUser(user) : null;
-}
-
-export async function getSessionUser(): Promise<SessionUser | null> {
-  const token = cookies().get(SESSION_COOKIE)?.value;
-  if (!token) return null;
-
-  const payload = await verifySession(token);
-  if (!payload) return null;
-
-  const user = await prisma.user.findUnique({
-    where: { id: payload.sub },
-    include: userWithAccess,
-  });
-
-  if (!user?.isActive) return null;
-  return toSessionUser(user);
-}
-
-export async function requirePageUser(): Promise<SessionUser> {
-  const user = await getSessionUser();
-  if (!user) redirect('/login');
-  return user;
+  const account = ROLE_ACCOUNTS[role];
+  const session = createSession(account);
+  writeSession(session);
+  return session;
 }

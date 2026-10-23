@@ -1,4 +1,4 @@
-// 客户端 Provider：Arco ConfigProvider 统一语言与组件上下文
+// 客户端 Provider：统一 Arco 中文语言包与组件上下文。
 'use client';
 
 import { ConfigProvider } from '@arco-design/web-react';

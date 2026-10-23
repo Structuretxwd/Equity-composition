@@ -1,42 +1,79 @@
-// 会话签名与校验：仅依赖 jose，可在 Edge Middleware 与 Node Route Handler 中共用
-import { SignJWT, jwtVerify } from 'jose';
+// 浏览器端会话：sessionStorage 中的短期 token（关闭标签页即失效）。
+// 这不是服务端可信会话，仅用于静态站点内的界面级访问控制。
+import type { Role, SessionUser } from './types';
 
-export const SESSION_COOKIE = 'equity_session';
-export const SESSION_MAX_AGE = 60 * 60 * 8;
+const SESSION_KEY = 'equity.session.v1';
+const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 
-function getSecret(): Uint8Array {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('缺少 AUTH_SECRET 环境变量，拒绝启动会话签名');
-    }
-    return new TextEncoder().encode('dev-only-insecure-secret-change-before-production');
+export const SESSION_CHANGE_EVENT = 'equity:session-change';
+
+function isRole(value: unknown): value is Role {
+  return value === 'ADMIN' || value === 'PARTNER' || value === 'INVESTOR';
+}
+
+function createToken(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
   }
-  return new TextEncoder().encode(secret);
+  return `token-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export async function signSession(userId: string): Promise<string> {
-  return new SignJWT({})
-    .setProtectedHeader({ alg: 'HS256' })
-    .setSubject(userId)
-    .setIssuedAt()
-    .setExpirationTime(Math.floor(Date.now() / 1000) + SESSION_MAX_AGE)
-    .sign(getSecret());
+export function createSession(input: {
+  role: Role;
+  name: string;
+  shareholderId: string | null;
+  shareholderName: string | null;
+}): SessionUser {
+  const issuedAt = Date.now();
+  return {
+    ...input,
+    token: createToken(),
+    issuedAt,
+    expiresAt: issuedAt + SESSION_TTL_MS,
+  };
 }
 
-export async function verifySession(token: string): Promise<{ sub: string } | null> {
+export function readSession(): SessionUser | null {
+  if (typeof window === 'undefined') return null;
+
   try {
-    const { payload } = await jwtVerify(token, getSecret(), { algorithms: ['HS256'] });
-    return typeof payload.sub === 'string' ? { sub: payload.sub } : null;
+    const raw = window.sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<SessionUser>;
+    if (
+      !isRole(parsed.role) ||
+      typeof parsed.token !== 'string' ||
+      typeof parsed.expiresAt !== 'number' ||
+      parsed.expiresAt <= Date.now()
+    ) {
+      window.sessionStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+
+    return {
+      role: parsed.role,
+      name: typeof parsed.name === 'string' ? parsed.name : parsed.role,
+      shareholderId: typeof parsed.shareholderId === 'string' ? parsed.shareholderId : null,
+      shareholderName:
+        typeof parsed.shareholderName === 'string' ? parsed.shareholderName : null,
+      token: parsed.token,
+      issuedAt: typeof parsed.issuedAt === 'number' ? parsed.issuedAt : 0,
+      expiresAt: parsed.expiresAt,
+    };
   } catch {
     return null;
   }
 }
 
-export const sessionCookieOptions = {
-  httpOnly: true,
-  sameSite: 'lax' as const,
-  secure: process.env.NODE_ENV === 'production',
-  path: '/',
-  maxAge: SESSION_MAX_AGE,
-};
+export function writeSession(session: SessionUser): void {
+  if (typeof window === 'undefined') return;
+  window.sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  window.dispatchEvent(new Event(SESSION_CHANGE_EVENT));
+}
+
+export function clearSession(): void {
+  if (typeof window === 'undefined') return;
+  window.sessionStorage.removeItem(SESSION_KEY);
+  window.dispatchEvent(new Event(SESSION_CHANGE_EVENT));
+}

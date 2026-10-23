@@ -1,9 +1,9 @@
-// 股权层级树：G6 动态加载，节点/连线颜色随 arco-theme 重绘
+// 股权历史结构树：G6 在客户端动态加载，节点/连线颜色随 arco-theme 重绘。
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import { Empty } from '@arco-design/web-react';
-import type { OwnershipTreeNode } from '@/lib/equity';
+import type { OwnershipTreeNode } from '@/lib/types';
 import { useArcoTheme } from './useArcoTheme';
 
 type Palette = {
@@ -99,7 +99,6 @@ export function OwnershipTree({
       try {
         const G6Module = await import('@antv/g6');
         const G6 = G6Module.default ?? G6Module;
-
         if (disposed || !containerRef.current) return;
 
         const palette = theme === 'dark' ? DARK_PALETTE : LIGHT_PALETTE;
@@ -167,20 +166,12 @@ export function OwnershipTree({
   const isEmpty = !data.children?.length;
 
   return (
-    <div style={{ position: 'relative', width: '100%' }}>
+    <div className="tree-wrap" style={{ height }}>
       <div ref={containerRef} style={{ width: '100%', height }} />
+      <div className="tree-hint">拖拽画布 · 滚轮缩放</div>
 
       {(isEmpty || error) && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'var(--color-bg-2)',
-          }}
-        >
+        <div className="tree-overlay">
           <Empty description={error ?? '暂无股权结构数据'} />
         </div>
       )}

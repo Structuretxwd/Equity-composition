@@ -1,4 +1,4 @@
-// 监听 body 的 arco-theme 属性，供 Canvas 图表（G6）同步深浅色
+// 监听 body 的 arco-theme 属性，供 G6 等 Canvas 图表同步深浅色。
 'use client';
 
 import { useEffect, useState } from 'react';

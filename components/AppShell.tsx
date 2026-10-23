@@ -1,61 +1,108 @@
-// 应用外壳：侧边导航由服务端按权限计算，主题切换与登出在客户端完成
+// 应用外壳：侧边导航、顶栏、主题切换与退出登录。
+// 导航项完全由 lib/rbac.ts 的角色权限决定，不在组件内散写角色判断。
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Avatar, Button, Dropdown, Layout, Menu } from '@arco-design/web-react';
+import {
+  Avatar,
+  Button,
+  Drawer,
+  Dropdown,
+  Layout,
+  Menu,
+  Tag,
+} from '@arco-design/web-react';
 import {
   IconCalendar,
+  IconExperiment,
   IconHistory,
+  IconMenu,
   IconMenuFold,
   IconMenuUnfold,
   IconMindMapping,
   IconPoweroff,
-  IconSettings,
+  IconStorage,
   IconUser,
+  IconUserGroup,
 } from '@arco-design/web-react/icon';
-import { NAV_ITEMS } from '@/lib/navigation';
+import { getVisibleNavItems, ROLE_LABEL, type NavItem } from '@/lib/rbac';
+import { clearSession } from '@/lib/session';
+import { useSession } from './SessionContext';
 import { ThemeToggle } from './ThemeToggle';
 
-type AppShellProps = {
-  user: {
-    name: string;
-    email: string;
-    role: string;
-    shareholderName: string | null;
-  };
-  allowedPaths: string[];
-  children: React.ReactNode;
+const NAV_ICONS: Record<NavItem['icon'], React.ReactNode> = {
+  users: <IconUserGroup />,
+  calendar: <IconCalendar />,
+  chart: <IconMindMapping />,
+  history: <IconHistory />,
+  experiment: <IconExperiment />,
+  storage: <IconStorage />,
 };
 
-const NAV_ICONS: Record<string, React.ReactNode> = {
-  '/cap-table': <IconUser />,
-  '/rounds': <IconCalendar />,
-  '/charts': <IconMindMapping />,
-  '/audit': <IconHistory />,
-  '/simulator': <IconSettings />,
+const ROLE_TAG_COLOR: Record<string, string> = {
+  ADMIN: 'red',
+  PARTNER: 'purple',
+  INVESTOR: 'green',
 };
 
-export function AppShell({ user, allowedPaths, children }: AppShellProps) {
-  const [collapsed, setCollapsed] = useState(false);
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const session = useSession();
   const pathname = usePathname();
   const router = useRouter();
+  const [collapsed, setCollapsed] = useState(false);
+  const [drawerVisible, setDrawerVisible] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  const items = useMemo(
-    () => NAV_ITEMS.filter((item) => allowedPaths.includes(item.path)),
-    [allowedPaths],
-  );
-  const activePath = items.find((item) => pathname.startsWith(item.path))?.path;
-  const pageTitle = items.find((item) => item.path === activePath)?.label ?? '股权管理';
+  const items = useMemo(() => getVisibleNavItems(session.role), [session.role]);
+  const activePath =
+    items.find((item) => pathname === item.path || pathname.startsWith(`${item.path}/`))?.path ??
+    items[0]?.path;
+  const pageTitle =
+    items.find((item) => item.path === activePath)?.label ?? '股权管理';
 
-  async function handleLogout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 900px)');
+    const sync = () => setIsMobile(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
+
+  useEffect(() => {
+    setDrawerVisible(false);
+  }, [pathname]);
+
+  function navigate(path: string) {
+    router.push(path);
+    setDrawerVisible(false);
+  }
+
+  function logout() {
+    clearSession();
     router.replace('/login');
-    router.refresh();
+  }
+
+  function renderMenu(mode: 'sider' | 'drawer') {
+    const compact = mode === 'sider' && collapsed;
+    return (
+      <Menu
+        className="app-nav"
+        selectedKeys={activePath ? [activePath] : []}
+        onClickMenuItem={(key) => navigate(key)}
+      >
+        {items.map((item) => (
+          <Menu.Item key={item.path}>
+            <span className="nav-icon">{NAV_ICONS[item.icon]}</span>
+            {!compact && <span>{item.label}</span>}
+          </Menu.Item>
+        ))}
+      </Menu>
+    );
   }
 
   const userMenu = (
-    <Menu onClickMenuItem={(key) => key === 'logout' && void handleLogout()}>
+    <Menu onClickMenuItem={(key) => key === 'logout' && logout()}>
       <Menu.Item key="logout">
         <IconPoweroff style={{ marginRight: 8 }} />
         退出登录
@@ -65,79 +112,91 @@ export function AppShell({ user, allowedPaths, children }: AppShellProps) {
 
   return (
     <Layout className="app-shell">
-      <Layout.Sider
-        width={220}
-        collapsedWidth={64}
-        collapsed={collapsed}
-        trigger={null}
-        className="app-sider"
-      >
-        <div className="app-logo">
-          <span className="app-logo-badge">股</span>
-          {!collapsed && <span>股权管理系统</span>}
-        </div>
-
-        <Menu
-          className="app-nav"
-          selectedKeys={activePath ? [activePath] : []}
-          onClickMenuItem={(key) => router.push(key)}
+      {!isMobile && (
+        <Layout.Sider
+          width={232}
+          collapsedWidth={68}
+          collapsed={collapsed}
+          trigger={null}
+          className="app-sider"
         >
-          {items.map((item) => (
-            <Menu.Item key={item.path}>
-              {NAV_ICONS[item.path]}
-              {!collapsed && item.label}
-            </Menu.Item>
-          ))}
-        </Menu>
-
-        <div style={{ padding: 16, borderTop: '1px solid var(--color-border-2)' }}>
-          <div className="muted" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
-            {collapsed ? 'v1.0' : 'Cap Table · v1.0'}
+          <div className="app-logo">
+            <span className="app-logo-badge">股</span>
+            {!collapsed && (
+              <span className="app-logo-text">
+                股权管理
+                <small>Cap Table</small>
+              </span>
+            )}
           </div>
-        </div>
-      </Layout.Sider>
+
+          {renderMenu('sider')}
+
+          <div className="app-sider-footer">
+            {!collapsed ? (
+              <>
+                <span className="status-dot" />
+                <span>本地 SQLite · v1.0</span>
+              </>
+            ) : (
+              <span className="status-dot" title="本地 SQLite 已连接" />
+            )}
+          </div>
+        </Layout.Sider>
+      )}
+
+      <Drawer
+        width={248}
+        visible={drawerVisible}
+        footer={null}
+        closable={false}
+        onCancel={() => setDrawerVisible(false)}
+        title={<span className="drawer-title">股权管理系统</span>}
+      >
+        {renderMenu('drawer')}
+      </Drawer>
 
       <Layout>
-        <Layout.Header
-          style={{
-            height: 64,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            padding: '0 20px',
-            background: 'var(--color-bg-2)',
-            borderBottom: '1px solid var(--color-border-2)',
-          }}
-        >
+        <Layout.Header className="app-header">
           <Button
             type="text"
-            onClick={() => setCollapsed((value) => !value)}
-            icon={collapsed ? <IconMenuUnfold /> : <IconMenuFold />}
-            aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}
+            onClick={() =>
+              isMobile ? setDrawerVisible(true) : setCollapsed((value) => !value)
+            }
+            icon={
+              isMobile ? (
+                <IconMenu />
+              ) : collapsed ? (
+                <IconMenuUnfold />
+              ) : (
+                <IconMenuFold />
+              )
+            }
+            aria-label={isMobile ? '打开导航' : collapsed ? '展开侧边栏' : '收起侧边栏'}
           />
-          <div style={{ fontSize: 15, fontWeight: 600 }}>{pageTitle}</div>
+
+          <div className="header-title-block">
+            <div className="header-title">{pageTitle}</div>
+            <div className="header-sub">浏览器本地数据 · 无服务端</div>
+          </div>
+
           <div style={{ flex: 1 }} />
           <ThemeToggle />
+
           <Dropdown droplist={userMenu} position="br" trigger="click">
-            <Button type="text" style={{ height: 44 }}>
-              <Avatar
-                size={28}
-                style={{ backgroundColor: 'rgb(var(--primary-6))', marginRight: 8 }}
-              >
-                {user.name.slice(0, 1)}
+            <Button type="text" className="user-button">
+              <Avatar size={30} className="user-avatar">
+                {session.name.slice(0, 1)}
               </Avatar>
-              <span
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  lineHeight: '16px',
-                }}
-              >
-                <span style={{ fontSize: 13 }}>{user.name}</span>
-                <span className="muted" style={{ fontSize: 11 }}>
-                  {user.role}
-                  {user.shareholderName ? ` · ${user.shareholderName}` : ''}
+              <span className="user-meta">
+                <span className="user-name">{session.name}</span>
+                <span className="user-role">
+                  <Tag size="small" color={ROLE_TAG_COLOR[session.role]}>
+                    {ROLE_LABEL[session.role]}
+                  </Tag>
+                  {session.shareholderName && session.role === 'INVESTOR' && (
+                    <span className="muted"> · 仅本人数据</span>
+                  )}
                 </span>
               </span>
             </Button>

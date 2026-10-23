@@ -1,4 +1,4 @@
-// 首屏主题脚本：优先 localStorage，其次系统 prefers-color-scheme，避免主题闪烁
+// 首屏主题脚本：在 body 起始处同步设置 arco-theme，避免深浅色闪烁。
 const themeScript = `
 (function () {
   try {
@@ -6,14 +6,15 @@ const themeScript = `
     var theme = stored === 'dark' || stored === 'light'
       ? stored
       : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.style.colorScheme = theme;
     if (theme === 'dark') {
       document.body.setAttribute('arco-theme', 'dark');
     } else {
       document.body.removeAttribute('arco-theme');
     }
-    document.documentElement.style.colorScheme = theme;
   } catch (error) {
-    /* 忽略隐私模式下的 localStorage 异常 */
+    /* 隐私模式下忽略 localStorage 异常 */
   }
 })();
 `;
