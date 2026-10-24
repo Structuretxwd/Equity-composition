@@ -66,6 +66,14 @@ function SidebarNav({
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [pill, setPill] = useState({ top: 0, height: 36, ready: false });
+  const [pillAnimated, setPillAnimated] = useState(false);
+
+  // 首次定位不做过渡：避免打开页面时色块从顶部滑下来，只有后续切换才滑动。
+  useEffect(() => {
+    if (!pill.ready || pillAnimated) return;
+    const timer = window.setTimeout(() => setPillAnimated(true), 120);
+    return () => window.clearTimeout(timer);
+  }, [pill.ready, pillAnimated]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -112,6 +120,7 @@ function SidebarNav({
         className="nav-pill"
         aria-hidden="true"
         data-ready={pill.ready}
+        data-animate={pillAnimated}
         style={{ transform: `translateY(${pill.top}px)`, height: pill.height }}
       />
       <Menu
@@ -144,17 +153,38 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [pendingPath, setPendingPath] = useState<string | null>(null);
+  const [hasNavigated, setHasNavigated] = useState(false);
 
   const items = useMemo(() => getVisibleNavItems(session.role), [session.role]);
   const activePath =
     items.find((item) => pathname === item.path || pathname.startsWith(`${item.path}/`))?.path ??
     items[0]?.path;
+  // 点击后立即高亮目标项（路由仍在加载），让切换有即时反馈。
+  const displayPath = pendingPath ?? activePath;
   const pageTitle =
-    items.find((item) => item.path === activePath)?.label ?? '股权管理';
+    items.find((item) => item.path === displayPath)?.label ?? '股权管理';
 
   useEffect(() => {
     document.title = `${pageTitle} · 股权管理系统`;
   }, [pageTitle]);
+
+  // 静态导出下每个页面是独立分块，提前预取可消除第一次切换的白等。
+  useEffect(() => {
+    const paths = items.map((item) => item.path);
+    if (paths.length === 0) return;
+
+    if (typeof window.requestIdleCallback !== 'function') {
+      const timer = window.setTimeout(() => paths.forEach((path) => router.prefetch(path)), 500);
+      return () => window.clearTimeout(timer);
+    }
+
+    const idle = window.requestIdleCallback(
+      () => paths.forEach((path) => router.prefetch(path)),
+      { timeout: 800 },
+    );
+    return () => window.cancelIdleCallback(idle);
+  }, [items, router]);
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 900px)');
@@ -166,11 +196,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setDrawerVisible(false);
+    setPendingPath(null);
     const content = document.getElementById('main-content');
     if (content) content.scrollTop = 0;
   }, [pathname]);
 
+  // 路由异常时兜底清除等待态，避免进度条一直挂着。
+  useEffect(() => {
+    if (!pendingPath) return;
+    const timer = window.setTimeout(() => setPendingPath(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [pendingPath]);
+
   function navigate(path: string) {
+    if (path === activePath) {
+      setDrawerVisible(false);
+      return;
+    }
+    setHasNavigated(true);
+    setPendingPath(path);
+    router.prefetch(path);
     router.push(path);
     setDrawerVisible(false);
   }
@@ -215,7 +260,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <SidebarNav
             items={items}
-            activePath={activePath}
+            activePath={displayPath}
             compact={collapsed}
             onNavigate={navigate}
           />
@@ -243,7 +288,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         <SidebarNav
           items={items}
-          activePath={activePath}
+          activePath={displayPath}
           compact={false}
           onNavigate={navigate}
         />
@@ -292,10 +337,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </span>
             </Button>
           </Dropdown>
+
+          {pendingPath && <span className="app-progress" aria-hidden="true" />}
         </Layout.Header>
 
-        <Layout.Content className="app-content" id="main-content">
-          <div className="page-transition" key={pathname}>
+        <Layout.Content
+          className="app-content"
+          id="main-content"
+          aria-busy={pendingPath ? true : undefined}
+        >
+          <div
+            className={hasNavigated ? 'page-transition is-animating' : 'page-transition'}
+            key={pathname}
+          >
             {children}
           </div>
         </Layout.Content>

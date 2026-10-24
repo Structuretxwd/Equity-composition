@@ -416,10 +416,14 @@ a {
     0 8px 18px -14px rgba(16, 25, 20, 0.65);
   opacity: 0;
   pointer-events: none;
+}
+
+/* 只有完成首次定位后才启用滑动，避免页面打开时色块从顶部滑落 */
+.nav-pill[data-animate='true'] {
   transition:
-    transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
-    height 0.26s cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 0.2s ease;
+    transform 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+    height 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.18s ease;
 }
 
 .nav-pill[data-ready='true'] {
@@ -524,6 +528,7 @@ body[arco-theme='dark'] .nav-pill {
 }
 
 .app-header {
+  position: relative;
   height: 56px !important;
   display: flex;
   align-items: center;
@@ -531,6 +536,38 @@ body[arco-theme='dark'] .nav-pill {
   padding: 0 16px 0 12px !important;
   background: var(--color-bg-1) !important;
   border-bottom: 1px solid var(--color-border-1);
+}
+
+/* 路由加载中的细进度条：给等待一个明确反馈，而不是让界面看起来卡住 */
+.app-progress {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.app-progress::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 36%;
+  background: rgb(var(--primary-6));
+  box-shadow: 0 0 8px rgba(var(--primary-6), 0.45);
+  animation: app-progress 0.85s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes app-progress {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(320%);
+  }
 }
 
 /* 顶栏保留当前页名：内容区滚动后仍能确认自己在哪一页 */
@@ -604,14 +641,14 @@ body[arco-theme='dark'] .arco-avatar:not(.user-avatar) {
 }
 
 /* 路由切换：内容轻抬淡入，只做一次，不逐块编排 */
-.page-transition {
-  animation: page-arrive 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+.page-transition.is-animating {
+  animation: page-arrive 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes page-arrive {
   from {
     opacity: 0;
-    transform: translateY(7px);
+    transform: translateY(4px);
   }
 
   to {
@@ -1739,12 +1776,20 @@ body[arco-theme='dark'] .arco-btn-primary:not(.arco-btn-disabled) {
   }
 
   .page-transition,
+  .page-transition.is-animating,
   .auth-card {
     animation: none;
   }
 
-  .nav-pill {
+  .nav-pill,
+  .nav-pill[data-animate='true'] {
     transition: none;
+  }
+
+  .app-progress::after {
+    width: 100%;
+    animation: none;
+    transform: none;
   }
 
   .round-card,
