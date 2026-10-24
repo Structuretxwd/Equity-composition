@@ -40,9 +40,7 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: '1'
           # 可选：在仓库 Settings → Secrets and variables → Actions → Variables 中配置
-          NEXT_PUBLIC_ADMIN_PASSWORD_HASH: ${{ vars.NEXT_PUBLIC_ADMIN_PASSWORD_HASH }}
           NEXT_PUBLIC_GITHUB_ADMIN: ${{ vars.NEXT_PUBLIC_GITHUB_ADMIN }}
-          NEXT_PUBLIC_DEMO_MODE: ${{ vars.NEXT_PUBLIC_DEMO_MODE }}
 
       - name: Verify sql.js WebAssembly asset
         run: test -f out/sql-wasm.wasm

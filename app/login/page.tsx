@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input, Message } from '@arco-design/web-react';
 import { IconGithub, IconLock, IconUser } from '@arco-design/web-react/icon';
-import { DEMO_LOGIN_ENABLED, signIn, signInWithGitHub } from '@/lib/auth';
+import { signIn, signInWithGitHub } from '@/lib/auth';
 import { getLandingPath } from '@/lib/rbac';
 import { readSession } from '@/lib/session';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -67,12 +67,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  }
-
-  function fillDemoAccount() {
-    setUsername('admin');
-    setPassword('admin123');
-    setError(null);
   }
 
   return (
@@ -165,14 +159,6 @@ export default function LoginPage() {
             {method === 'password' ? '登录' : '使用 GitHub 登录'}
           </Button>
         </form>
-
-        {method === 'password' && DEMO_LOGIN_ENABLED && (
-          <button type="button" className="auth-demo" onClick={fillDemoAccount}>
-            <span>初始管理员</span>
-            <code>admin / admin123</code>
-            <span className="auth-demo-action">一键填入</span>
-          </button>
-        )}
 
         <p className="auth-note">注册已关闭。需要新账号，请让管理员在控制台创建。</p>
 

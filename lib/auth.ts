@@ -1,12 +1,10 @@
 // 浏览器端认证：本地账号登录 + GitHub 管理员令牌登录。
 // 会话写入 sessionStorage；这不是服务端可信会话，仅用于静态站点内的界面级访问控制。
-import { DEMO_LOGIN_ENABLED, upsertGithubAdmin, verifyCredentials } from './accounts';
+import { upsertGithubAdmin, verifyCredentials } from './accounts';
 import { saveDeployToken } from './deploy';
 import { verifyGitHubAdmin } from './github-auth';
 import { createSession, writeSession } from './session';
 import type { SessionUser } from './types';
-
-export { DEMO_LOGIN_ENABLED };
 
 function toSession(account: {
   id: string;

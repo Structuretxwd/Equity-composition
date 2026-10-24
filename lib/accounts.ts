@@ -16,36 +16,7 @@ type AccountRecord = {
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_\u4e00-\u9fa5]{2,24}$/;
 
-/**
- * 仅保留引导用的管理员账号。
- * 演示业务数据与 partner / investor 演示账号已移除，注册入口也已关闭；
- * 其他账号由管理员在控制台创建。
- */
-export const DEFAULT_ACCOUNTS: Array<{
-  username: string;
-  password: string;
-  displayName: string;
-  role: Role;
-  shareholderId: string | null;
-  hash: string;
-}> = [
-  {
-    username: 'admin',
-    password: 'admin123',
-    displayName: '系统管理员',
-    role: 'ADMIN',
-    shareholderId: null,
-    hash:
-      process.env.NEXT_PUBLIC_ADMIN_PASSWORD_HASH?.trim() ||
-      '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
-  },
-];
-
-/** 构建时注入自定义密码哈希后，登录页不再展示演示口令 */
-export const DEMO_LOGIN_ENABLED =
-  !process.env.NEXT_PUBLIC_ADMIN_PASSWORD_HASH &&
-  process.env.NEXT_PUBLIC_DEMO_MODE !== 'false';
-
+// 无内置账号：首次使用 GitHub 管理员登录时自动创建本地管理员，其他账号由管理员在控制台创建。
 export function validateUsername(raw: string): string {
   const username = raw.trim();
   if (!USERNAME_PATTERN.test(username)) {
@@ -99,40 +70,11 @@ export function listAccounts(db: Database): AccountRow[] {
   );
 }
 
-export function countAccounts(db: Database): number {
-  return Number(db.get<{ count: number }>('SELECT COUNT(*) AS count FROM accounts')?.count ?? 0);
-}
-
 export function countAdmins(db: Database): number {
   return Number(
     db.get<{ count: number }>("SELECT COUNT(*) AS count FROM accounts WHERE role = 'ADMIN'")
       ?.count ?? 0,
   );
-}
-
-/** 兼容旧索引：首次启动或导入旧备份时补齐默认账号 */
-export async function ensureDefaultAccounts(db: Database): Promise<void> {
-  if (countAccounts(db) > 0) return;
-
-  const createdAt = new Date().toISOString();
-  await db.transaction(() => {
-    for (const account of DEFAULT_ACCOUNTS) {
-      db.run(
-        `INSERT INTO accounts
-           (id, username, passwordHash, displayName, role, shareholderId, createdAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          accountId(),
-          account.username,
-          account.hash,
-          account.displayName,
-          account.role,
-          account.shareholderId,
-          createdAt,
-        ],
-      );
-    }
-  });
 }
 
 export async function verifyCredentials(

@@ -1023,7 +1023,6 @@ body[arco-theme='dark'] .arco-avatar:not(.user-avatar) {
   color: var(--color-text-4);
 }
 
-.auth-demo:focus-visible,
 .auth-switch:focus-visible {
   outline: 2px solid rgb(var(--primary-6));
   outline-offset: 2px;
@@ -1074,43 +1073,6 @@ body[arco-theme='dark'] .arco-avatar:not(.user-avatar) {
   margin-top: 8px;
   height: 40px;
   font-weight: 600;
-}
-
-.auth-demo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  margin-top: 14px;
-  padding: 8px 11px;
-  border: 1px dashed var(--color-border-2);
-  border-radius: var(--app-radius-sm);
-  background: transparent;
-  color: var(--color-text-4);
-  font: inherit;
-  font-size: 11px;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
-
-.auth-demo:hover {
-  border-color: var(--color-border-3);
-  color: var(--color-text-2);
-}
-
-.auth-demo code {
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--color-fill-2);
-  color: var(--color-text-2);
-  font-family: var(--app-font-mono);
-  font-size: 11px;
-}
-
-.auth-demo-action {
-  margin-left: auto;
-  color: rgb(var(--primary-6));
 }
 
 .auth-hint {
