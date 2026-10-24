@@ -10,7 +10,7 @@ type AppDbContextValue = {
   version: number;
   refresh: () => void;
   exportBytes: () => Uint8Array;
-  importBytes: (bytes: Uint8Array) => Promise<{ seeded: boolean }>;
+  importBytes: (bytes: Uint8Array) => Promise<void>;
   reset: () => Promise<void>;
 };
 
@@ -58,11 +58,10 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
 
   const importBytes = useCallback(async (bytes: Uint8Array) => {
     const module = await import('@/lib/db');
-    const result = await module.importDatabase(bytes);
+    await module.importDatabase(bytes);
     const next = await module.getDatabase();
     setDb(next);
     setVersion((value) => value + 1);
-    return result;
   }, []);
 
   const reset = useCallback(async () => {

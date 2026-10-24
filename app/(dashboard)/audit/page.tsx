@@ -16,7 +16,13 @@ const ACTION_META: Record<string, { label: string; color: string }> = {
   INIT_DATABASE: { label: '初始化数据库', color: 'blue' },
   UPDATE_CAP_TABLE: { label: '调整持股比例', color: 'orange' },
   IMPORT_DATABASE: { label: '导入数据库', color: 'purple' },
-  RESET_DATABASE: { label: '重置数据库', color: 'red' },
+  RESET_DATABASE: { label: '清空业务数据', color: 'red' },
+  CREATE_ACCOUNT: { label: '创建账号', color: 'green' },
+  UPDATE_ACCOUNT: { label: '修改账号', color: 'arcoblue' },
+  DELETE_ACCOUNT: { label: '删除账号', color: 'red' },
+  RESET_PASSWORD: { label: '重置密码', color: 'gold' },
+  TRIGGER_DEPLOY: { label: '触发站点重建', color: 'cyan' },
+  SQL_EXEC: { label: '执行 SQL', color: 'magenta' },
 };
 
 function prettyJson(value: string | null): string {

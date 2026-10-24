@@ -92,4 +92,39 @@ export const MIGRATIONS: Migration[] = [
       DROP TABLE IF EXISTS accounts;
     `,
   },
+  {
+    // 清理旧版本内置的演示数据：5 位股东、3 轮融资及其快照、初始化审计日志和演示账号。
+    // 仅删除固定 id / 用户名，不影响用户自行录入的数据。
+    version: 3,
+    up: `
+      UPDATE accounts SET shareholderId = NULL
+        WHERE shareholderId IN (
+          'sh-founder-zhang', 'sh-founder-li', 'sh-investor-chen',
+          'sh-investor-xinghai', 'sh-investor-vision'
+        );
+      DELETE FROM accounts
+        WHERE username IN ('partner', 'investor') AND role <> 'ADMIN';
+      DELETE FROM share_holdings
+        WHERE shareholderId IN (
+          'sh-founder-zhang', 'sh-founder-li', 'sh-investor-chen',
+          'sh-investor-xinghai', 'sh-investor-vision'
+        )
+        OR fundingRoundId IN ('round-angel-2023', 'round-prea-2024', 'round-seriesa-2025');
+      DELETE FROM cap_table_snapshots
+        WHERE shareholderId IN (
+          'sh-founder-zhang', 'sh-founder-li', 'sh-investor-chen',
+          'sh-investor-xinghai', 'sh-investor-vision'
+        )
+        OR roundId IN ('round-angel-2023', 'round-prea-2024', 'round-seriesa-2025');
+      DELETE FROM audit_logs WHERE id = 'audit-seed-initial';
+      DELETE FROM funding_rounds
+        WHERE id IN ('round-angel-2023', 'round-prea-2024', 'round-seriesa-2025');
+      DELETE FROM shareholders
+        WHERE id IN (
+          'sh-founder-zhang', 'sh-founder-li', 'sh-investor-chen',
+          'sh-investor-xinghai', 'sh-investor-vision'
+        );
+    `,
+    down: '',
+  },
 ];

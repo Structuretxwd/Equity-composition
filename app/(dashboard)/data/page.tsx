@@ -77,13 +77,9 @@ export default function DataPage() {
     setImporting(true);
     try {
       const bytes = new Uint8Array(await pendingFile.arrayBuffer());
-      const result = await importBytes(bytes);
+      await importBytes(bytes);
       setPendingFile(null);
-      Message.success(
-        result.seeded
-          ? '导入完成。备份为空，已自动写入演示数据。'
-          : '导入完成，正在刷新本地数据…',
-      );
+      Message.success('导入完成，正在刷新本地数据…');
       window.setTimeout(() => window.location.reload(), 700);
     } catch (error) {
       Message.error(error instanceof Error ? error.message : '导入失败');
@@ -96,10 +92,10 @@ export default function DataPage() {
     setResetting(true);
     try {
       await reset();
-      Message.success('已重置为内置演示数据');
+      Message.success('业务数据已清空，账号保留');
       setResetVisible(false);
     } catch (error) {
-      Message.error(error instanceof Error ? error.message : '重置失败');
+      Message.error(error instanceof Error ? error.message : '清空失败');
     } finally {
       setResetting(false);
     }
@@ -201,14 +197,14 @@ export default function DataPage() {
 
         <section className="panel data-action danger-panel">
           <div>
-            <h3>重置演示数据</h3>
+            <h3>清空业务数据</h3>
             <Tag color="red" size="small">
               危险操作
             </Tag>
           </div>
           <p>
-            删除当前浏览器中的全部股东、轮次与审计日志，并重新写入内置的三轮融资演示数据。
-            该操作不可撤销，建议先导出备份。
+            删除当前浏览器中的全部股东、融资轮次、持股快照与审计日志。账号与会话不受影响，
+            操作后系统为空白库，可由管理员重新录入或导入备份。该操作不可撤销，建议先导出备份。
           </p>
           <div className="data-action-foot">
             <Button
@@ -217,9 +213,9 @@ export default function DataPage() {
               onClick={() => setResetVisible(true)}
               disabled={!mayReset}
             >
-              重置数据库
+              清空业务数据
             </Button>
-            {!mayReset && <span className="muted">仅管理员可重置</span>}
+            {!mayReset && <span className="muted">仅管理员可清空</span>}
           </div>
         </section>
       </div>
@@ -284,12 +280,12 @@ export default function DataPage() {
       </Modal>
 
       <Modal
-        title="确认重置数据库"
+        title="确认清空业务数据"
         visible={resetVisible}
         onCancel={() => setResetVisible(false)}
         onOk={() => void confirmReset()}
         confirmLoading={resetting}
-        okText="确认重置"
+        okText="确认清空"
         cancelText="取消"
         okButtonProps={{ status: 'danger' }}
         autoFocus={false}
@@ -301,7 +297,7 @@ export default function DataPage() {
           style={{ marginBottom: 14 }}
         />
         <p className="page-subtitle" style={{ margin: 0 }}>
-          重置后将恢复为内置演示数据：5 位股东、3 轮融资及对应快照。
+          清空范围：股东、融资轮次、持股快照与审计日志。账号信息会保留，可继续登录使用。
         </p>
       </Modal>
     </div>

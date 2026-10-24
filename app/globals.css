@@ -970,7 +970,7 @@ body[arco-theme='dark'] .arco-avatar:not(.user-avatar) {
   text-align: right;
 }
 
-/* ---------- 登录 / 注册 ---------- */
+/* ---------- 登录 ---------- */
 
 .auth-page {
   min-height: 100vh;
@@ -1023,41 +1023,8 @@ body[arco-theme='dark'] .arco-avatar:not(.user-avatar) {
   color: var(--color-text-4);
 }
 
-.auth-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2px;
-  margin-top: 24px;
-  padding: 3px;
-  border-radius: var(--app-radius-sm);
-  background: var(--color-fill-2);
-}
-
-.auth-tab {
-  height: 30px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--color-text-3);
-  font: inherit;
-  font-size: 12.5px;
-  cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease;
-}
-
-.auth-tab:hover {
-  color: var(--color-text-1);
-}
-
-.auth-tab.is-active {
-  background: var(--color-bg-2);
-  color: var(--color-text-1);
-  font-weight: 600;
-  box-shadow: 0 1px 2px rgba(16, 25, 20, 0.08);
-}
-
-.auth-tab:focus-visible,
-.auth-demo:focus-visible {
+.auth-demo:focus-visible,
+.auth-switch:focus-visible {
   outline: 2px solid rgb(var(--primary-6));
   outline-offset: 2px;
 }
@@ -1146,11 +1113,33 @@ body[arco-theme='dark'] .arco-avatar:not(.user-avatar) {
   color: rgb(var(--primary-6));
 }
 
+.auth-hint {
+  margin: 2px 0 0;
+  font-size: 10.5px;
+  line-height: 1.65;
+  color: var(--color-text-4);
+}
+
 .auth-note {
   margin: 16px 0 0;
   font-size: 10.5px;
   line-height: 1.7;
   color: var(--color-text-4);
+}
+
+.auth-switch {
+  display: block;
+  margin: 10px auto 0;
+  border: none;
+  background: transparent;
+  color: rgb(var(--primary-6));
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.auth-switch:hover {
+  text-decoration: underline;
 }
 
 /* ---------- 管理员控制台 ---------- */

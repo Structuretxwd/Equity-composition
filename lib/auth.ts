@@ -1,6 +1,8 @@
-// 浏览器端认证：账号从本地 accounts 表读取，角色由账号记录自动识别。
+// 浏览器端认证：本地账号登录 + GitHub 管理员令牌登录。
 // 会话写入 sessionStorage；这不是服务端可信会话，仅用于静态站点内的界面级访问控制。
-import { createAccount, DEMO_LOGIN_ENABLED, verifyCredentials } from './accounts';
+import { DEMO_LOGIN_ENABLED, upsertGithubAdmin, verifyCredentials } from './accounts';
+import { saveDeployToken } from './deploy';
+import { verifyGitHubAdmin } from './github-auth';
 import { createSession, writeSession } from './session';
 import type { SessionUser } from './types';
 
@@ -38,24 +40,22 @@ export async function signIn(username: string, password: string): Promise<Sessio
 }
 
 /**
- * 注册新账号。
- * 静态站点没有后台审核，新账号默认给“合伙人”只读权限，
- * 管理员可在控制台调整角色、绑定股东或重置密码。
+ * 管理员 GitHub 登录：
+ * 用 PAT 向 GitHub 验证用户名后，把该 GitHub 用户名绑定为本地管理员账号。
+ * 令牌同时写入 sessionStorage，控制台的「立即重建」可直接复用。
  */
-export async function registerAccount(input: {
-  username: string;
-  password: string;
-  displayName?: string;
-}): Promise<SessionUser> {
+export async function signInWithGitHub(
+  username: string,
+  token: string,
+): Promise<SessionUser> {
+  const identity = await verifyGitHubAdmin(username, token);
+
   const { getDatabase } = await import('./db');
   const db = await getDatabase();
-  const account = await createAccount(db, {
-    username: input.username,
-    password: input.password,
-    displayName: input.displayName,
-    role: 'PARTNER',
-  });
+  const account = await upsertGithubAdmin(db, identity);
+
   const session = toSession(account);
   writeSession(session);
+  saveDeployToken(token.trim());
   return session;
 }

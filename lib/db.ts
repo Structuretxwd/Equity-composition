@@ -7,7 +7,6 @@ import {
   type StorageAdapter,
 } from '@motioneffector/sql';
 import { DB_STORAGE_KEY, MIGRATIONS } from './schema';
-import { seedDatabase } from './seed';
 import { ensureDefaultAccounts } from './accounts';
 
 const SQLITE_HEADER = [83, 81, 76, 105, 116, 101, 32, 102, 111, 114, 109, 97, 116, 32, 51, 0];
@@ -95,11 +94,6 @@ function getWasmPath(): string {
   return `${basePath}/sql-wasm.wasm`;
 }
 
-function countRows(db: Database, table: string): number {
-  const row = db.get<{ count: number }>(`SELECT COUNT(*) AS count FROM ${table}`);
-  return Number(row?.count ?? 0);
-}
-
 /** 校验 SQLite 文件头，避免用户误传任意文件覆盖本地数据库 */
 export function isSqliteFile(bytes: Uint8Array): boolean {
   if (bytes.length < SQLITE_HEADER.length) return false;
@@ -120,10 +114,6 @@ async function openDatabase(data?: Uint8Array): Promise<Database> {
 
   // 每次打开都执行增量迁移，旧备份文件也能自动升级到最新 Schema
   await db.migrate(MIGRATIONS);
-
-  if (countRows(db, 'shareholders') === 0) {
-    await seedDatabase(db);
-  }
 
   // 旧版本数据库没有 accounts 表数据时，补齐默认账号
   await ensureDefaultAccounts(db);
@@ -155,7 +145,7 @@ export async function getDatabaseInstance(): Promise<Database> {
  * 2. 用导入数据创建新实例并执行迁移（失败时旧库保持可用）；
  * 3. 成功后替换单例、关闭旧实例，并立即写入 IndexedDB。
  */
-export async function importDatabase(bytes: Uint8Array): Promise<{ seeded: boolean }> {
+export async function importDatabase(bytes: Uint8Array): Promise<void> {
   if (!isSqliteFile(bytes)) {
     throw new Error('文件不是有效的 SQLite 数据库');
   }
@@ -170,12 +160,6 @@ export async function importDatabase(bytes: Uint8Array): Promise<{ seeded: boole
 
   try {
     await next.migrate(MIGRATIONS);
-
-    let seeded = false;
-    if (countRows(next, 'shareholders') === 0) {
-      await seedDatabase(next);
-      seeded = true;
-    }
     await ensureDefaultAccounts(next);
 
     await next.save();
@@ -194,8 +178,6 @@ export async function importDatabase(bytes: Uint8Array): Promise<{ seeded: boole
         persistWritesEnabled = true;
       }
     }
-
-    return { seeded };
   } catch (error) {
     // 导入失败时关闭半成品实例，同样不能让它把不完整数据写回 IndexedDB
     persistWritesEnabled = false;
@@ -208,11 +190,13 @@ export async function importDatabase(bytes: Uint8Array): Promise<{ seeded: boole
   }
 }
 
-/** 重置为内置演示数据（仅管理员可见），会清除当前浏览器中的全部本地数据 */
+/** 清空业务数据（仅管理员可见）：删除股东、轮次、持股与审计日志，账号保留 */
 export async function resetDatabase(): Promise<void> {
   const db = await getDatabase();
 
   await db.transaction(() => {
+    // 先解除账号与股东的绑定，避免删除股东时留下悬空引用
+    db.run('UPDATE accounts SET shareholderId = NULL WHERE shareholderId IS NOT NULL');
     db.exec(`
       DROP TABLE IF EXISTS audit_logs;
       DROP TABLE IF EXISTS cap_table_snapshots;
@@ -224,7 +208,6 @@ export async function resetDatabase(): Promise<void> {
   });
 
   await db.migrate(MIGRATIONS);
-  await seedDatabase(db);
   await ensureDefaultAccounts(db);
   await db.save();
 }

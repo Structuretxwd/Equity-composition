@@ -1,8 +1,7 @@
-// 本地账号体系：注册、登录校验与管理员账号管理。
+// 本地账号体系：登录校验、管理员创建账号与 GitHub 管理员身份绑定。
 // 账号保存在浏览器数据库里，登录后由账号记录自动决定角色与数据范围。
 import type { Database } from '@motioneffector/sql';
 import type { AccountRow, Role } from './types';
-import { SEED_SHAREHOLDER_IDS } from './seed';
 
 type AccountRecord = {
   id: string;
@@ -17,7 +16,12 @@ type AccountRecord = {
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_\u4e00-\u9fa5]{2,24}$/;
 
-export const DEMO_ACCOUNTS: Array<{
+/**
+ * 仅保留引导用的管理员账号。
+ * 演示业务数据与 partner / investor 演示账号已移除，注册入口也已关闭；
+ * 其他账号由管理员在控制台创建。
+ */
+export const DEFAULT_ACCOUNTS: Array<{
   username: string;
   password: string;
   displayName: string;
@@ -34,26 +38,6 @@ export const DEMO_ACCOUNTS: Array<{
     hash:
       process.env.NEXT_PUBLIC_ADMIN_PASSWORD_HASH?.trim() ||
       '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
-  },
-  {
-    username: 'partner',
-    password: 'partner123',
-    displayName: '李岚',
-    role: 'PARTNER',
-    shareholderId: SEED_SHAREHOLDER_IDS.li,
-    hash:
-      process.env.NEXT_PUBLIC_PARTNER_PASSWORD_HASH?.trim() ||
-      'd4e870198339c045e84f416cc6a1f15c30f010f68e14c637a9d35366f2e35ba6',
-  },
-  {
-    username: 'investor',
-    password: 'investor123',
-    displayName: '陈默',
-    role: 'INVESTOR',
-    shareholderId: SEED_SHAREHOLDER_IDS.chen,
-    hash:
-      process.env.NEXT_PUBLIC_INVESTOR_PASSWORD_HASH?.trim() ||
-      '4f841b0d8d0c53395802c1588be3b15c0f26336a019b93a98a03bce1ad693d8e',
   },
 ];
 
@@ -132,7 +116,7 @@ export async function ensureDefaultAccounts(db: Database): Promise<void> {
 
   const createdAt = new Date().toISOString();
   await db.transaction(() => {
-    for (const account of DEMO_ACCOUNTS) {
+    for (const account of DEFAULT_ACCOUNTS) {
       db.run(
         `INSERT INTO accounts
            (id, username, passwordHash, displayName, role, shareholderId, createdAt)
@@ -165,7 +149,7 @@ export async function verifyCredentials(
     [username.trim()],
   );
 
-  if (!row) throw new Error('账号不存在，请先注册或检查账号名');
+  if (!row) throw new Error('账号不存在，请检查账号名或联系管理员');
 
   const hash = await hashPassword(password);
   if (hash !== row.passwordHash) throw new Error('密码不正确');
@@ -222,6 +206,54 @@ export async function createAccount(
         shareholderId,
         new Date().toISOString(),
       ],
+    );
+  });
+  await db.save();
+
+  const created = readAccount(db, id);
+  if (!created) throw new Error('账号创建失败');
+  return created;
+}
+
+/**
+ * 绑定 GitHub 管理员身份：
+ * 令牌验证通过后，把 GitHub 用户名映射为本地 ADMIN 账号。
+ * 已存在同名账号时提升为管理员；不存在时创建一个不可用密码的账号占位。
+ */
+export async function upsertGithubAdmin(
+  db: Database,
+  input: { login: string; name?: string | null },
+): Promise<AccountRow> {
+  const login = input.login.trim();
+  if (!login) throw new Error('GitHub 用户名为空');
+
+  const existing = db.get<{ id: string; role: Role }>(
+    'SELECT id, role FROM accounts WHERE username = ?',
+    [login],
+  );
+
+  if (existing) {
+    if (existing.role !== 'ADMIN') {
+      await db.transaction(() => {
+        db.run("UPDATE accounts SET role = 'ADMIN' WHERE id = ?", [existing.id]);
+      });
+      await db.save();
+    }
+    const account = readAccount(db, existing.id);
+    if (!account) throw new Error('账号读取失败');
+    return account;
+  }
+
+  const id = accountId();
+  const displayName = (input.name ?? '').trim() || login;
+  // GitHub 登录不依赖本地密码，写入随机哈希占位，避免空密码可登录
+  const passwordHash = await hashPassword(crypto.randomUUID());
+  await db.transaction(() => {
+    db.run(
+      `INSERT INTO accounts
+         (id, username, passwordHash, displayName, role, shareholderId, createdAt)
+       VALUES (?, ?, ?, ?, 'ADMIN', NULL, ?)`,
+      [id, login, passwordHash, displayName, new Date().toISOString()],
     );
   });
   await db.save();

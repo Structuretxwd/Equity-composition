@@ -1,24 +1,24 @@
-// 登录页：账号 + 密码登录，角色由账号记录自动识别；支持在同一页面注册本地账号。
+// 登录页：本地账号密码登录，或管理员使用 GitHub 用户名 + PAT 验证身份。
+// 注册入口已关闭，新账号由管理员在控制台创建。
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input, Message } from '@arco-design/web-react';
-import { IconLock, IconUser } from '@arco-design/web-react/icon';
-import { DEMO_LOGIN_ENABLED, registerAccount, signIn } from '@/lib/auth';
+import { IconGithub, IconLock, IconUser } from '@arco-design/web-react/icon';
+import { DEMO_LOGIN_ENABLED, signIn, signInWithGitHub } from '@/lib/auth';
 import { getLandingPath } from '@/lib/rbac';
 import { readSession } from '@/lib/session';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
-type Mode = 'login' | 'register';
+type Method = 'password' | 'github';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>('login');
+  const [method, setMethod] = useState<Method>('password');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [displayName, setDisplayName] = useState('');
+  const [token, setToken] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -27,11 +27,12 @@ export default function LoginPage() {
     if (session) router.replace(getLandingPath(session.role));
   }, [router]);
 
-  function switchMode(next: Mode) {
-    if (next === mode) return;
-    setMode(next);
+  function switchMethod(next: Method) {
+    if (next === method) return;
+    setMethod(next);
+    setUsername('');
     setPassword('');
-    setConfirm('');
+    setToken('');
     setError(null);
   }
 
@@ -40,15 +41,15 @@ export default function LoginPage() {
     if (loading) return;
 
     if (!username.trim()) {
-      setError('请输入账号');
+      setError(method === 'github' ? '请输入 GitHub 用户名' : '请输入账号');
       return;
     }
-    if (!password) {
+    if (method === 'password' && !password) {
       setError('请输入密码');
       return;
     }
-    if (mode === 'register' && password !== confirm) {
-      setError('两次输入的密码不一致');
+    if (method === 'github' && !token.trim()) {
+      setError('请输入 Personal Access Token');
       return;
     }
 
@@ -56,22 +57,19 @@ export default function LoginPage() {
     setError(null);
     try {
       const session =
-        mode === 'login'
+        method === 'password'
           ? await signIn(username, password)
-          : await registerAccount({ username, password, displayName });
-      Message.success(
-        mode === 'login' ? `欢迎回来，${session.name}` : `账号已创建，欢迎，${session.name}`,
-      );
+          : await signInWithGitHub(username, token);
+      Message.success(`欢迎回来，${session.name}`);
       router.replace(getLandingPath(session.role));
     } catch (authError) {
-      setError(authError instanceof Error ? authError.message : '操作失败，请重试');
+      setError(authError instanceof Error ? authError.message : '登录失败，请重试');
     } finally {
       setLoading(false);
     }
   }
 
   function fillDemoAccount() {
-    setMode('login');
     setUsername('admin');
     setPassword('admin123');
     setError(null);
@@ -92,37 +90,18 @@ export default function LoginPage() {
           </div>
         </header>
 
-        <div className="auth-tabs" role="tablist" aria-label="登录或注册">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'login'}
-            className={`auth-tab${mode === 'login' ? ' is-active' : ''}`}
-            onClick={() => switchMode('login')}
-          >
-            登录
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'register'}
-            className={`auth-tab${mode === 'register' ? ' is-active' : ''}`}
-            onClick={() => switchMode('register')}
-          >
-            注册
-          </button>
-        </div>
-
-        <h1 className="auth-title">{mode === 'login' ? '登录工作台' : '创建本地账号'}</h1>
+        <h1 className="auth-title">
+          {method === 'password' ? '登录工作台' : 'GitHub 管理员登录'}
+        </h1>
         <p className="auth-sub">
-          {mode === 'login'
+          {method === 'password'
             ? '输入账号与密码即可，系统会自动识别你的角色与数据范围。'
-            : '新账号默认为只读合伙人，管理员可在控制台调整权限。'}
+            : '使用 GitHub 用户名与 Personal Access Token 验证管理员身份。'}
         </p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label className="auth-label" htmlFor="username">
-            账号
+            {method === 'password' ? '账号' : 'GitHub 用户名'}
           </label>
           <Input
             id="username"
@@ -131,85 +110,79 @@ export default function LoginPage() {
               setUsername(value);
               setError(null);
             }}
-            placeholder="请输入账号"
-            prefix={<IconUser />}
+            placeholder={method === 'password' ? '请输入账号' : '例如 octocat'}
+            prefix={method === 'password' ? <IconUser /> : <IconGithub />}
             size="large"
             allowClear
             autoComplete="username"
             autoFocus
           />
 
-          {mode === 'register' && (
+          {method === 'password' ? (
             <>
-              <label className="auth-label" htmlFor="displayName">
-                显示名称（可选）
-              </label>
-              <Input
-                id="displayName"
-                value={displayName}
-                onChange={setDisplayName}
-                placeholder="例如：李岚"
-                size="large"
-                maxLength={24}
-                autoComplete="nickname"
-              />
-            </>
-          )}
-
-          <label className="auth-label" htmlFor="password">
-            密码
-          </label>
-          <Input.Password
-            id="password"
-            value={password}
-            onChange={(value) => {
-              setPassword(value);
-              setError(null);
-            }}
-            placeholder={mode === 'login' ? '请输入密码' : '至少 6 位'}
-            prefix={<IconLock />}
-            size="large"
-            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-          />
-
-          {mode === 'register' && (
-            <>
-              <label className="auth-label" htmlFor="confirm">
-                确认密码
+              <label className="auth-label" htmlFor="password">
+                密码
               </label>
               <Input.Password
-                id="confirm"
-                value={confirm}
+                id="password"
+                value={password}
                 onChange={(value) => {
-                  setConfirm(value);
+                  setPassword(value);
                   setError(null);
                 }}
-                placeholder="再次输入密码"
+                placeholder="请输入密码"
                 prefix={<IconLock />}
                 size="large"
-                autoComplete="new-password"
+                autoComplete="current-password"
               />
+            </>
+          ) : (
+            <>
+              <label className="auth-label" htmlFor="token">
+                Personal Access Token
+              </label>
+              <Input.Password
+                id="token"
+                value={token}
+                onChange={(value) => {
+                  setToken(value);
+                  setError(null);
+                }}
+                placeholder="ghp_… 或 github_pat_…"
+                prefix={<IconLock />}
+                size="large"
+                autoComplete="off"
+              />
+              <p className="auth-hint">
+                Deploy Key 只能用于 Git 推送，无法调用 GitHub API 登录。令牌仅保存在当前标签页，并可在控制台直接用于触发重建。
+              </p>
             </>
           )}
 
           {error && <div className="auth-error">{error}</div>}
 
           <Button type="primary" htmlType="submit" size="large" long loading={loading}>
-            {mode === 'login' ? '登录' : '创建并登录'}
+            {method === 'password' ? '登录' : '使用 GitHub 登录'}
           </Button>
         </form>
 
-        {mode === 'login' && DEMO_LOGIN_ENABLED && (
+        {method === 'password' && DEMO_LOGIN_ENABLED && (
           <button type="button" className="auth-demo" onClick={fillDemoAccount}>
-            <span>演示管理员</span>
+            <span>初始管理员</span>
             <code>admin / admin123</code>
             <span className="auth-demo-action">一键填入</span>
           </button>
         )}
 
-        <p className="auth-note">
-          账号与数据仅保存在当前浏览器。换设备或清理浏览器数据前，请在「数据管理」导出备份。
-        </p>
+        <p className="auth-note">注册已关闭。需要新账号，请让管理员在控制台创建。</p>
+
+        <button
+          type="button"
+          className="auth-switch"
+          onClick={() => switchMethod(method === 'password' ? 'github' : 'password')}
+        >
+          {method === 'password' ? '管理员使用 GitHub 登录' : '返回账号密码登录'}
+        </button>
       </section>
     </main>
   );

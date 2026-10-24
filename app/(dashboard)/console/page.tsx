@@ -450,7 +450,7 @@ export default function ConsolePage() {
           <div>
             <h2 className="panel-title">账号管理</h2>
             <p className="panel-subtitle">
-              新注册账号默认为只读合伙人，可在这里调整为管理员、投资人，或绑定到具体股东。
+              新建账号默认为只读合伙人，可在这里调整为管理员、投资人，或绑定到具体股东。
             </p>
           </div>
           <Button type="primary" icon={<IconUserAdd />} onClick={() => setCreateVisible(true)}>
