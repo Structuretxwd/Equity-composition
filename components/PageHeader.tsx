@@ -1,11 +1,9 @@
-// 页面标题区：统一标题、描述与右侧操作区布局。
+// 页面标题区：标题自己承担层级，不再额外加英文眉标。
 export function PageHeader({
-  eyebrow,
   title,
   subtitle,
   extra,
 }: {
-  eyebrow?: string;
   title: string;
   subtitle?: string;
   extra?: React.ReactNode;
@@ -13,7 +11,6 @@ export function PageHeader({
   return (
     <div className="page-header">
       <div style={{ minWidth: 0 }}>
-        {eyebrow && <div className="page-eyebrow">{eyebrow}</div>}
         <h1 className="page-title">{title}</h1>
         {subtitle && <p className="page-subtitle">{subtitle}</p>}
       </div>

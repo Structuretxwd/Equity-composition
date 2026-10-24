@@ -9,6 +9,7 @@ import type {
   FundingRound,
   RoundSummary,
   Role,
+  Shareholder,
   ShareholderType,
 } from './types';
 
@@ -40,6 +41,17 @@ type CapTableRecord = {
   roundId: string;
   roundName: string;
 };
+
+export function listShareholders(db: Database): Shareholder[] {
+  return db
+    .all<Shareholder>(
+      `SELECT id, name, type, initialShares, createdAt
+       FROM shareholders
+       ORDER BY CASE type WHEN 'FOUNDER' THEN 0 WHEN 'INVESTOR' THEN 1 ELSE 2 END,
+                initialShares DESC, name ASC`,
+    )
+    .map((row) => ({ ...row, initialShares: Number(row.initialShares) }));
+}
 
 export function listRounds(db: Database): RoundSummary[] {
   const rounds = db.all<RoundRecord>(

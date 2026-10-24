@@ -54,6 +54,20 @@ CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_logs (timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_rounds_date ON funding_rounds (date);
 `;
 
+const ACCOUNTS_SCHEMA = `
+CREATE TABLE IF NOT EXISTS accounts (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL COLLATE NOCASE UNIQUE,
+  passwordHash TEXT NOT NULL,
+  displayName TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('ADMIN', 'PARTNER', 'INVESTOR')),
+  shareholderId TEXT REFERENCES shareholders(id) ON DELETE SET NULL,
+  createdAt TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_accounts_username ON accounts (username);
+`;
+
 export const MIGRATIONS: Migration[] = [
   {
     version: 1,
@@ -68,6 +82,14 @@ export const MIGRATIONS: Migration[] = [
       DROP TABLE IF EXISTS share_holdings;
       DROP TABLE IF EXISTS funding_rounds;
       DROP TABLE IF EXISTS shareholders;
+    `,
+  },
+  {
+    version: 2,
+    up: ACCOUNTS_SCHEMA,
+    down: `
+      DROP INDEX IF EXISTS idx_accounts_username;
+      DROP TABLE IF EXISTS accounts;
     `,
   },
 ];

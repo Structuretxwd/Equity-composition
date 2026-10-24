@@ -22,6 +22,7 @@ import {
   IconMenuUnfold,
   IconMindMapping,
   IconPoweroff,
+  IconSettings,
   IconStorage,
   IconUser,
   IconUserGroup,
@@ -38,6 +39,7 @@ const NAV_ICONS: Record<NavItem['icon'], React.ReactNode> = {
   history: <IconHistory />,
   experiment: <IconExperiment />,
   storage: <IconStorage />,
+  console: <IconSettings />,
 };
 
 const ROLE_TAG_COLOR: Record<string, string> = {
@@ -60,6 +62,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     items[0]?.path;
   const pageTitle =
     items.find((item) => item.path === activePath)?.label ?? '股权管理';
+
+  useEffect(() => {
+    document.title = `${pageTitle} · 股权管理系统`;
+  }, [pageTitle]);
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 900px)');
@@ -112,6 +118,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <Layout className="app-shell">
+      <a className="skip-link" href="#main-content">
+        跳到主要内容
+      </a>
+
       {!isMobile && (
         <Layout.Sider
           width={232}
@@ -136,7 +146,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {!collapsed ? (
               <>
                 <span className="status-dot" />
-                <span>本地 SQLite · v1.0</span>
+                <span>本地 SQLite 已连接</span>
               </>
             ) : (
               <span className="status-dot" title="本地 SQLite 已连接" />
@@ -175,13 +185,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             aria-label={isMobile ? '打开导航' : collapsed ? '展开侧边栏' : '收起侧边栏'}
           />
 
-          <div className="header-title-block">
-            <div className="header-title">{pageTitle}</div>
-            <div className="header-sub">浏览器本地数据 · 无服务端</div>
-          </div>
-
           <div style={{ flex: 1 }} />
           <ThemeToggle />
+          <span className="header-divider" aria-hidden="true" />
 
           <Dropdown droplist={userMenu} position="br" trigger="click">
             <Button type="text" className="user-button">
@@ -203,7 +209,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Dropdown>
         </Layout.Header>
 
-        <Layout.Content className="app-content">{children}</Layout.Content>
+        <Layout.Content className="app-content" id="main-content">
+          {children}
+        </Layout.Content>
       </Layout>
     </Layout>
   );

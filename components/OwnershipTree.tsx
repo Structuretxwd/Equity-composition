@@ -14,6 +14,7 @@ type Palette = {
   round: string;
   stroke: string;
   edge: string;
+  nodeText: string;
   roundText: string;
 };
 
@@ -28,25 +29,27 @@ type G6NodeData = {
 };
 
 const LIGHT_PALETTE: Palette = {
-  company: '#165DFF',
-  founder: '#4080FF',
-  investor: '#722ED1',
-  newShareholder: '#00B42A',
-  round: '#F2F3F5',
-  stroke: '#E5E6EB',
-  edge: '#C9CDD4',
-  roundText: '#4E5969',
+  company: '#8c5a1b',
+  founder: '#2f5d50',
+  investor: '#55688a',
+  newShareholder: '#3e7a78',
+  round: '#efebe2',
+  stroke: '#d9d4c8',
+  edge: '#c7c1b3',
+  nodeText: '#ffffff',
+  roundText: '#565e58',
 };
 
 const DARK_PALETTE: Palette = {
-  company: '#2E5BFF',
-  founder: '#3C7EFF',
-  investor: '#8D4EDA',
-  newShareholder: '#23C343',
-  round: '#2A2A2A',
-  stroke: '#4E5969',
-  edge: '#6B7785',
-  roundText: '#E5E6EB',
+  company: '#c9973f',
+  founder: '#6fa08d',
+  investor: '#8aa0c0',
+  newShareholder: '#63a8a4',
+  round: '#1f2924',
+  stroke: '#3a453e',
+  edge: '#4b574f',
+  nodeText: '#101814',
+  roundText: '#c2c7bf',
 };
 
 function buildGraphData(node: OwnershipTreeNode, palette: Palette): G6NodeData {
@@ -67,7 +70,7 @@ function buildGraphData(node: OwnershipTreeNode, palette: Palette): G6NodeData {
     style: { fill, stroke: palette.stroke },
     labelCfg: {
       style: {
-        fill: isRound ? palette.roundText : '#FFFFFF',
+        fill: isRound ? palette.roundText : palette.nodeText,
         fontSize: 12,
       },
     },

@@ -11,12 +11,7 @@ import {
   Tag,
 } from '@arco-design/web-react';
 import type { TableColumnProps } from '@arco-design/web-react';
-import {
-  IconExperiment,
-  IconSafe,
-  IconSwap,
-  IconUserAdd,
-} from '@arco-design/web-react/icon';
+import { MetricStrip } from '@/components/MetricStrip';
 import { PageHeader } from '@/components/PageHeader';
 import { useAppDb } from '@/components/DbProvider';
 import { useSession } from '@/components/SessionContext';
@@ -156,7 +151,6 @@ export default function SimulatorPage() {
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="WHAT-IF SIMULATOR"
         title="股权稀释模拟器"
         subtitle="输入新一轮融资比例，预览各股东的稀释结果。所有计算只在内存中完成，不会写入数据库。"
         extra={<Tag color="red">仅管理员</Tag>}
@@ -206,63 +200,42 @@ export default function SimulatorPage() {
         </div>
       </div>
 
-      <div className="stat-grid">
-        <div className="stat-card">
-          <div className="stat-icon">
-            <IconExperiment />
-          </div>
-          <div className="stat-body">
-            <div className="stat-label">模拟轮次</div>
-            <div className="stat-value" style={{ fontSize: 17 }}>
-              {activeRound?.name ?? '—'}
-            </div>
-            <div className="stat-hint">基准轮后持股快照</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <IconUserAdd />
-          </div>
-          <div className="stat-body">
-            <div className="stat-label">新投资人</div>
-            <div className="stat-value">{formatPercent(Number(newPercent))}</div>
-            <div className="stat-hint">新进入股东获得的比例</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <IconSafe />
-          </div>
-          <div className="stat-body">
-            <div className="stat-label">受保护投资人</div>
-            <div className="stat-value">{protection ? formatPercent(protectedSum) : '未启用'}</div>
-            <div className="stat-hint">该部分比例保持不变</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <IconSwap />
-          </div>
-          <div className="stat-body">
-            <div className="stat-label">融资后合计</div>
-            <div className="stat-value">
-              {outcome.data
-                ? formatPercent(
-                    round6(outcome.data.results.reduce((sum, row) => sum + row.after, 0)),
-                  )
-                : '—'}
-            </div>
-            <div className="stat-hint">应为 100.00%</div>
-          </div>
-        </div>
-      </div>
+      <MetricStrip
+        items={[
+          {
+            label: '模拟轮次',
+            value: activeRound?.name ?? '—',
+            hint: '基准轮后持股快照',
+            compact: true,
+          },
+          {
+            label: '新投资人',
+            value: formatPercent(Number(newPercent)),
+            hint: '新进入股东获得的比例',
+          },
+          {
+            label: '受保护投资人',
+            value: protection ? formatPercent(protectedSum) : '未启用',
+            hint: '该部分比例保持不变',
+          },
+          {
+            label: '融资后合计',
+            value: outcome.data
+              ? formatPercent(
+                  round6(outcome.data.results.reduce((sum, row) => sum + row.after, 0)),
+                )
+              : '—',
+            hint: '应为 100.00%',
+          },
+        ]}
+      />
 
       {outcome.error && (
         <Alert type="error" showIcon content={outcome.error} />
       )}
 
-      <div className="panel">
-        <div className="panel-head">
+      <section className="panel table-panel">
+        <div className="panel-head" style={{ padding: '18px 20px 0', marginBottom: 14 }}>
           <div>
             <h2 className="panel-title">稀释预览</h2>
             <p className="panel-subtitle">
@@ -275,11 +248,10 @@ export default function SimulatorPage() {
           data={outcome.data?.results ?? []}
           rowKey="shareholderId"
           pagination={false}
-          stripe
           scroll={{ x: 880 }}
           noDataElement={<div style={{ padding: 36 }}>暂无可模拟的数据</div>}
         />
-      </div>
+      </section>
     </div>
   );
 }

@@ -1,33 +1,24 @@
-// 登录页：角色选择 + 本地密码哈希校验，成功后把会话写入 sessionStorage。
+// 登录页：账号 + 密码登录，角色由账号记录自动识别；支持在同一页面注册本地账号。
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input, Message } from '@arco-design/web-react';
-import {
-  IconCheckCircleFill,
-  IconLock,
-  IconSafe,
-  IconStorage,
-  IconUser,
-  IconUserGroup,
-} from '@arco-design/web-react/icon';
-import { DEMO_MODE, DEMO_PASSWORDS, signIn } from '@/lib/auth';
-import { getLandingPath, ROLE_DESCRIPTION, ROLE_LABEL, ROLES } from '@/lib/rbac';
+import { IconLock, IconUser } from '@arco-design/web-react/icon';
+import { DEMO_LOGIN_ENABLED, registerAccount, signIn } from '@/lib/auth';
+import { getLandingPath } from '@/lib/rbac';
 import { readSession } from '@/lib/session';
-import type { Role } from '@/lib/types';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
-const ROLE_ICONS: Record<Role, React.ReactNode> = {
-  ADMIN: <IconSafe />,
-  PARTNER: <IconUserGroup />,
-  INVESTOR: <IconUser />,
-};
+type Mode = 'login' | 'register';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [role, setRole] = useState<Role>('ADMIN');
+  const [mode, setMode] = useState<Mode>('login');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -36,160 +27,190 @@ export default function LoginPage() {
     if (session) router.replace(getLandingPath(session.role));
   }, [router]);
 
+  function switchMode(next: Mode) {
+    if (next === mode) return;
+    setMode(next);
+    setPassword('');
+    setConfirm('');
+    setError(null);
+  }
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (loading) return;
+
+    if (!username.trim()) {
+      setError('请输入账号');
+      return;
+    }
     if (!password) {
       setError('请输入密码');
+      return;
+    }
+    if (mode === 'register' && password !== confirm) {
+      setError('两次输入的密码不一致');
       return;
     }
 
     setLoading(true);
     setError(null);
     try {
-      const session = await signIn(role, password);
-      Message.success(`欢迎回来，${session.name}`);
+      const session =
+        mode === 'login'
+          ? await signIn(username, password)
+          : await registerAccount({ username, password, displayName });
+      Message.success(
+        mode === 'login' ? `欢迎回来，${session.name}` : `账号已创建，欢迎，${session.name}`,
+      );
       router.replace(getLandingPath(session.role));
-    } catch (signInError) {
-      setError(signInError instanceof Error ? signInError.message : '登录失败，请重试');
+    } catch (authError) {
+      setError(authError instanceof Error ? authError.message : '操作失败，请重试');
     } finally {
       setLoading(false);
     }
   }
 
-  function selectRole(nextRole: Role) {
-    setRole(nextRole);
-    setPassword('');
-    setError(null);
-  }
-
-  function fillDemoPassword() {
-    setPassword(DEMO_PASSWORDS[role]);
+  function fillDemoAccount() {
+    setMode('login');
+    setUsername('admin');
+    setPassword('admin123');
     setError(null);
   }
 
   return (
-    <main className="login-page">
-      <div className="login-theme">
+    <main className="auth-page">
+      <div className="auth-theme">
         <ThemeToggle />
       </div>
 
-      <div className="login-shell">
-        <section className="login-brand">
-          <div className="login-brand-top">
-            <span className="app-logo-badge login-logo">股</span>
-            <div>
-              <div className="login-brand-name">股权管理系统</div>
-              <div className="login-brand-en">CAP TABLE · LOCAL FIRST</div>
-            </div>
+      <section className="auth-card">
+        <header className="auth-brand">
+          <span className="app-logo-badge">股</span>
+          <div className="auth-brand-text">
+            <strong>股权管理系统</strong>
+            <span>CAP TABLE · LOCAL FIRST</span>
           </div>
+        </header>
 
-          <div className="login-brand-copy">
-            <div className="login-eyebrow">纯静态 · 浏览器数据库</div>
-            <h1>
-              把股权结构
-              <br />
-              装进浏览器。
-            </h1>
-            <p>
-              股东名册、融资轮次、股权结构树与稀释模拟，全部在本地 SQLite 中完成。
-              没有服务器，没有云端数据库，数据只属于当前浏览器。
-            </p>
-          </div>
+        <div className="auth-tabs" role="tablist" aria-label="登录或注册">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'login'}
+            className={`auth-tab${mode === 'login' ? ' is-active' : ''}`}
+            onClick={() => switchMode('login')}
+          >
+            登录
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'register'}
+            className={`auth-tab${mode === 'register' ? ' is-active' : ''}`}
+            onClick={() => switchMode('register')}
+          >
+            注册
+          </button>
+        </div>
 
-          <div className="login-features">
-            <div className="login-feature">
-              <IconStorage />
-              <span>sql.js + IndexedDB 自动持久化</span>
-            </div>
-            <div className="login-feature">
-              <IconSafe />
-              <span>RBAC 三角色隔离与写入二次校验</span>
-            </div>
-            <div className="login-feature">
-              <IconCheckCircleFill />
-              <span>支持 .sqlite 备份导出与跨设备迁移</span>
-            </div>
-          </div>
+        <h1 className="auth-title">{mode === 'login' ? '登录工作台' : '创建本地账号'}</h1>
+        <p className="auth-sub">
+          {mode === 'login'
+            ? '输入账号与密码即可，系统会自动识别你的角色与数据范围。'
+            : '新账号默认为只读合伙人，管理员可在控制台调整权限。'}
+        </p>
 
-          <div className="login-brand-foot">
-            GitHub Pages 静态托管 · 数据不离开浏览器
-          </div>
-        </section>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label className="auth-label" htmlFor="username">
+            账号
+          </label>
+          <Input
+            id="username"
+            value={username}
+            onChange={(value) => {
+              setUsername(value);
+              setError(null);
+            }}
+            placeholder="请输入账号"
+            prefix={<IconUser />}
+            size="large"
+            allowClear
+            autoComplete="username"
+            autoFocus
+          />
 
-        <section className="login-card">
-          <div className="login-card-head">
-            <div>
-              <h2>登录工作台</h2>
-              <p>选择角色并输入对应密码</p>
-            </div>
-            <IconLock className="login-lock" />
-          </div>
-
-          <div className="role-grid">
-            {ROLES.map((item) => (
-              <button
-                key={item}
-                type="button"
-                className={`role-card ${role === item ? 'active' : ''}`}
-                onClick={() => selectRole(item)}
-              >
-                <span className="role-icon">{ROLE_ICONS[item]}</span>
-                <span className="role-text">
-                  <strong>{ROLE_LABEL[item]}</strong>
-                  <small>{ROLE_DESCRIPTION[item]}</small>
-                </span>
-                {role === item && <IconCheckCircleFill className="role-check" />}
-              </button>
-            ))}
-          </div>
-
-          <form onSubmit={handleSubmit} className="login-form">
-            <label className="login-label" htmlFor="password">
-              登录密码
-            </label>
-            <Input.Password
-              id="password"
-              value={password}
-              onChange={setPassword}
-              placeholder={`请输入${ROLE_LABEL[role]}密码`}
-              allowClear
-              size="large"
-              autoComplete="current-password"
-            />
-
-            {error && <div className="login-error">{error}</div>}
-
-            <Button
-              type="primary"
-              htmlType="submit"
-              size="large"
-              long
-              loading={loading}
-            >
-              进入系统
-            </Button>
-          </form>
-
-          {DEMO_MODE ? (
-            <div className="demo-box">
-              <div>
-                <span className="demo-label">演示密码</span>
-                <code>{DEMO_PASSWORDS[role]}</code>
-              </div>
-              <Button type="text" size="mini" onClick={fillDemoPassword}>
-                一键填入
-              </Button>
-            </div>
-          ) : (
-            <p className="login-note">密码哈希由构建环境注入，演示提示已关闭。</p>
+          {mode === 'register' && (
+            <>
+              <label className="auth-label" htmlFor="displayName">
+                显示名称（可选）
+              </label>
+              <Input
+                id="displayName"
+                value={displayName}
+                onChange={setDisplayName}
+                placeholder="例如：李岚"
+                size="large"
+                maxLength={24}
+                autoComplete="nickname"
+              />
+            </>
           )}
 
-          <p className="login-note">
-            会话仅保存在 sessionStorage，关闭标签页即失效。客户端权限用于防止误操作，
-            不能抵御开发者工具篡改。
-          </p>
-        </section>
-      </div>
+          <label className="auth-label" htmlFor="password">
+            密码
+          </label>
+          <Input.Password
+            id="password"
+            value={password}
+            onChange={(value) => {
+              setPassword(value);
+              setError(null);
+            }}
+            placeholder={mode === 'login' ? '请输入密码' : '至少 6 位'}
+            prefix={<IconLock />}
+            size="large"
+            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+          />
+
+          {mode === 'register' && (
+            <>
+              <label className="auth-label" htmlFor="confirm">
+                确认密码
+              </label>
+              <Input.Password
+                id="confirm"
+                value={confirm}
+                onChange={(value) => {
+                  setConfirm(value);
+                  setError(null);
+                }}
+                placeholder="再次输入密码"
+                prefix={<IconLock />}
+                size="large"
+                autoComplete="new-password"
+              />
+            </>
+          )}
+
+          {error && <div className="auth-error">{error}</div>}
+
+          <Button type="primary" htmlType="submit" size="large" long loading={loading}>
+            {mode === 'login' ? '登录' : '创建并登录'}
+          </Button>
+        </form>
+
+        {mode === 'login' && DEMO_LOGIN_ENABLED && (
+          <button type="button" className="auth-demo" onClick={fillDemoAccount}>
+            <span>演示管理员</span>
+            <code>admin / admin123</code>
+            <span className="auth-demo-action">一键填入</span>
+          </button>
+        )}
+
+        <p className="auth-note">
+          账号与数据仅保存在当前浏览器。换设备或清理浏览器数据前，请在「数据管理」导出备份。
+        </p>
+      </section>
     </main>
   );
 }

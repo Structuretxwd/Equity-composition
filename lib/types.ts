@@ -88,9 +88,21 @@ export type SessionUser = {
   name: string;
   shareholderId: string | null;
   shareholderName: string | null;
+  accountId: string | null;
+  username: string | null;
   token: string;
   issuedAt: number;
   expiresAt: number;
+};
+
+export type AccountRow = {
+  id: string;
+  username: string;
+  displayName: string;
+  role: Role;
+  shareholderId: string | null;
+  shareholderName: string | null;
+  createdAt: string;
 };
 
 export type DatabaseStats = {

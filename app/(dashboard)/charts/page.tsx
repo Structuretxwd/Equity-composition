@@ -3,13 +3,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Select, Space, Tag } from '@arco-design/web-react';
-import {
-  IconCalendar,
-  IconSwap,
-  IconUserGroup,
-  IconUser,
-} from '@arco-design/web-react/icon';
 import { EquityPieChart, type EquityPieDatum } from '@/components/EquityPieChart';
+import { MetricStrip } from '@/components/MetricStrip';
 import { OwnershipTree } from '@/components/OwnershipTree';
 import { PageHeader } from '@/components/PageHeader';
 import { useAppDb } from '@/components/DbProvider';
@@ -68,7 +63,6 @@ export default function ChartsPage() {
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="OWNERSHIP MAP"
         title="股权结构可视化"
         subtitle={
           activeRound
@@ -89,52 +83,30 @@ export default function ChartsPage() {
         }
       />
 
-      <div className="stat-grid">
-        <div className="stat-card">
-          <div className="stat-icon">
-            <IconCalendar />
-          </div>
-          <div className="stat-body">
-            <div className="stat-label">历史融资轮次</div>
-            <div className="stat-value">{rounds.length}</div>
-            <div className="stat-hint">从天使轮到最新一轮</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <IconUserGroup />
-          </div>
-          <div className="stat-body">
-            <div className="stat-label">本轮股东数</div>
-            <div className="stat-value">{activeRound?.shareholders.length ?? 0}</div>
-            <div className="stat-hint">含创始人与机构投资人</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <IconUser />
-          </div>
-          <div className="stat-body">
-            <div className="stat-label">投资人数量</div>
-            <div className="stat-value">{investorCount}</div>
-            <div className="stat-hint">
-              {activeRound?.investorProtection ? '本轮享有不被稀释保护' : '本轮按比例稀释'}
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <IconSwap />
-          </div>
-          <div className="stat-body">
-            <div className="stat-label">{scope ? '本人持股' : '比例合计'}</div>
-            <div className="stat-value">
-              {scope ? formatPercent(rows[0]?.percent ?? 0) : formatPercent(totalPercent)}
-            </div>
-            <div className="stat-hint">{scope ? '仅展示本人数据' : '所有股东合计应为 100%'}</div>
-          </div>
-        </div>
-      </div>
+      <MetricStrip
+        items={[
+          {
+            label: '历史融资轮次',
+            value: rounds.length,
+            hint: '从天使轮到最新一轮',
+          },
+          {
+            label: '本轮股东数',
+            value: activeRound?.shareholders.length ?? 0,
+            hint: '含创始人与机构投资人',
+          },
+          {
+            label: '投资人数量',
+            value: investorCount,
+            hint: activeRound?.investorProtection ? '本轮享有不被稀释保护' : '本轮按比例稀释',
+          },
+          {
+            label: scope ? '本人持股' : '比例合计',
+            value: scope ? formatPercent(rows[0]?.percent ?? 0) : formatPercent(totalPercent),
+            hint: scope ? '仅展示本人数据' : '所有股东合计应为 100%',
+          },
+        ]}
+      />
 
       {scope && (
         <Alert

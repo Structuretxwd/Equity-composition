@@ -32,7 +32,6 @@ export default function RoundsPage() {
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="FUNDING HISTORY"
         title="融资轮次"
         subtitle="按时间倒序查看每轮融资的稀释比例、投资人保护策略与轮后持股快照。"
       />

@@ -8,6 +8,7 @@ import {
 } from '@motioneffector/sql';
 import { DB_STORAGE_KEY, MIGRATIONS } from './schema';
 import { seedDatabase } from './seed';
+import { ensureDefaultAccounts } from './accounts';
 
 const SQLITE_HEADER = [83, 81, 76, 105, 116, 101, 32, 102, 111, 114, 109, 97, 116, 32, 51, 0];
 
@@ -124,6 +125,9 @@ async function openDatabase(data?: Uint8Array): Promise<Database> {
     await seedDatabase(db);
   }
 
+  // 旧版本数据库没有 accounts 表数据时，补齐默认账号
+  await ensureDefaultAccounts(db);
+
   await db.save();
   dbInstance = db;
   return db;
@@ -172,6 +176,7 @@ export async function importDatabase(bytes: Uint8Array): Promise<{ seeded: boole
       await seedDatabase(next);
       seeded = true;
     }
+    await ensureDefaultAccounts(next);
 
     await next.save();
 
@@ -220,5 +225,6 @@ export async function resetDatabase(): Promise<void> {
 
   await db.migrate(MIGRATIONS);
   await seedDatabase(db);
+  await ensureDefaultAccounts(db);
   await db.save();
 }

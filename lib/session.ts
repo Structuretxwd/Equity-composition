@@ -23,6 +23,8 @@ export function createSession(input: {
   name: string;
   shareholderId: string | null;
   shareholderName: string | null;
+  accountId: string | null;
+  username: string | null;
 }): SessionUser {
   const issuedAt = Date.now();
   return {
@@ -57,6 +59,8 @@ export function readSession(): SessionUser | null {
       shareholderId: typeof parsed.shareholderId === 'string' ? parsed.shareholderId : null,
       shareholderName:
         typeof parsed.shareholderName === 'string' ? parsed.shareholderName : null,
+      accountId: typeof parsed.accountId === 'string' ? parsed.accountId : null,
+      username: typeof parsed.username === 'string' ? parsed.username : null,
       token: parsed.token,
       issuedAt: typeof parsed.issuedAt === 'number' ? parsed.issuedAt : 0,
       expiresAt: parsed.expiresAt,

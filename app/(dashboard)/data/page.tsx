@@ -9,15 +9,8 @@ import {
   Modal,
   Tag,
 } from '@arco-design/web-react';
-import {
-  IconCalendarClock,
-  IconDelete,
-  IconDownload,
-  IconFile,
-  IconStorage,
-  IconUpload,
-  IconUserGroup,
-} from '@arco-design/web-react/icon';
+import { IconDelete, IconDownload, IconUpload } from '@arco-design/web-react/icon';
+import { MetricStrip } from '@/components/MetricStrip';
 import { PageHeader } from '@/components/PageHeader';
 import { useAppDb } from '@/components/DbProvider';
 import { useSession } from '@/components/SessionContext';
@@ -115,7 +108,6 @@ export default function DataPage() {
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="LOCAL DATABASE"
         title="数据管理"
         subtitle="数据库完全运行在浏览器中。导出 .sqlite 文件即可离线归档，或迁移到另一台设备。"
         extra={<Tag color="blue">GitHub Pages 静态模式</Tag>}
@@ -127,50 +119,30 @@ export default function DataPage() {
         content="数据默认只保存在当前浏览器的 IndexedDB 中，不会上传到任何服务器。更换设备、更换浏览器或清除站点数据都会导致数据丢失，请定期导出 .sqlite 备份。"
       />
 
-      <div className="stat-grid">
-        <div className="stat-card">
-          <div className="stat-icon">
-            <IconUserGroup />
-          </div>
-          <div className="stat-body">
-            <div className="stat-label">股东数量</div>
-            <div className="stat-value">{stats.shareholders}</div>
-            <div className="stat-hint">Shareholder 表记录数</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <IconCalendarClock />
-          </div>
-          <div className="stat-body">
-            <div className="stat-label">融资轮次</div>
-            <div className="stat-value">{stats.rounds}</div>
-            <div className="stat-hint">含历史轮次快照</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <IconFile />
-          </div>
-          <div className="stat-body">
-            <div className="stat-label">审计日志</div>
-            <div className="stat-value">{stats.auditLogs}</div>
-            <div className="stat-hint">随数据库一起导出</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <IconStorage />
-          </div>
-          <div className="stat-body">
-            <div className="stat-label">数据库体积</div>
-            <div className="stat-value" style={{ fontSize: 20 }}>
-              {formatBytes(size)}
-            </div>
-            <div className="stat-hint">sql.js export() 实时大小</div>
-          </div>
-        </div>
-      </div>
+      <MetricStrip
+        items={[
+          {
+            label: '股东数量',
+            value: stats.shareholders,
+            hint: 'Shareholder 表记录数',
+          },
+          {
+            label: '融资轮次',
+            value: stats.rounds,
+            hint: '含历史轮次快照',
+          },
+          {
+            label: '审计日志',
+            value: stats.auditLogs,
+            hint: '随数据库一起导出',
+          },
+          {
+            label: '数据库体积',
+            value: formatBytes(size),
+            hint: 'sql.js export() 实时大小',
+          },
+        ]}
+      />
 
       <div className="data-grid">
         <section className="panel data-action">

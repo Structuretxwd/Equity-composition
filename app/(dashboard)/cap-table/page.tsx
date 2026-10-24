@@ -16,14 +16,9 @@ import {
   Tag,
 } from '@arco-design/web-react';
 import type { TableColumnProps } from '@arco-design/web-react';
-import {
-  IconEdit,
-  IconSafe,
-  IconSwap,
-  IconTrophy,
-  IconUserGroup,
-} from '@arco-design/web-react/icon';
+import { IconEdit } from '@arco-design/web-react/icon';
 import { useAppDb } from '@/components/DbProvider';
+import { MetricStrip } from '@/components/MetricStrip';
 import { PageHeader } from '@/components/PageHeader';
 import { useSession } from '@/components/SessionContext';
 import { formatPercent, formatRoundDate, formatShares, round6 } from '@/lib/format';
@@ -189,7 +184,6 @@ export default function CapTablePage() {
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="CAP TABLE"
         title="股东名册"
         subtitle={
           activeRound
@@ -218,52 +212,30 @@ export default function CapTablePage() {
         }
       />
 
-      <div className="stat-grid">
-        <div className="stat-card">
-          <div className="stat-icon">
-            <IconUserGroup />
-          </div>
-          <div className="stat-body">
-            <div className="stat-label">本轮登记股东</div>
-            <div className="stat-value">{activeRound?.shareholders.length ?? 0}</div>
-            <div className="stat-hint">{scope ? '当前仅展示本人记录' : '全部持股主体'}</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <IconTrophy />
-          </div>
-          <div className="stat-body">
-            <div className="stat-label">最大持股</div>
-            <div className="stat-value">{topRow ? formatPercent(topRow.percent) : '—'}</div>
-            <div className="stat-hint">{topRow?.shareholderName ?? '暂无数据'}</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <IconSwap />
-          </div>
-          <div className="stat-body">
-            <div className="stat-label">可见比例合计</div>
-            <div className="stat-value">{formatPercent(totalPercent)}</div>
-            <div className="stat-hint">正常情况下应合计 100%</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <IconSafe />
-          </div>
-          <div className="stat-body">
-            <div className="stat-label">本轮稀释</div>
-            <div className="stat-value">
-              {activeRound ? formatPercent(activeRound.totalDilutionPercent) : '—'}
-            </div>
-            <div className="stat-hint">
-              {activeRound?.investorProtection ? '投资人受保护' : '全体按比例稀释'}
-            </div>
-          </div>
-        </div>
-      </div>
+      <MetricStrip
+        items={[
+          {
+            label: '本轮登记股东',
+            value: activeRound?.shareholders.length ?? 0,
+            hint: scope ? '当前仅展示本人记录' : '全部持股主体',
+          },
+          {
+            label: '最大持股',
+            value: topRow ? formatPercent(topRow.percent) : '—',
+            hint: topRow?.shareholderName ?? '暂无数据',
+          },
+          {
+            label: '可见比例合计',
+            value: formatPercent(totalPercent),
+            hint: '正常情况下应合计 100%',
+          },
+          {
+            label: '本轮稀释',
+            value: activeRound ? formatPercent(activeRound.totalDilutionPercent) : '—',
+            hint: activeRound?.investorProtection ? '投资人受保护' : '全体按比例稀释',
+          },
+        ]}
+      />
 
       <Alert
         type={scope ? 'info' : editable ? 'success' : 'warning'}
@@ -277,13 +249,12 @@ export default function CapTablePage() {
         }
       />
 
-      <div className="panel">
+      <div className="panel table-panel">
         <Table
           columns={columns}
           data={rows}
           rowKey="shareholderId"
           pagination={false}
-          stripe
           scroll={{ x: 860 }}
           noDataElement={<div style={{ padding: 36 }}>当前轮次暂无可见持股数据</div>}
         />

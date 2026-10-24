@@ -28,6 +28,7 @@ export const PERMISSIONS = {
   DATA_EXPORT: 'data:export',
   DATA_IMPORT: 'data:import',
   DATA_RESET: 'data:reset',
+  CONSOLE_ACCESS: 'console:access',
 } as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -50,7 +51,7 @@ const ROLE_PERMISSIONS: Record<Role, PermissionKey[]> = {
 export type NavItem = {
   path: string;
   label: string;
-  icon: 'users' | 'calendar' | 'chart' | 'history' | 'experiment' | 'storage';
+  icon: 'users' | 'calendar' | 'chart' | 'history' | 'experiment' | 'storage' | 'console';
   permission: PermissionKey;
 };
 
@@ -90,6 +91,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: '数据管理',
     icon: 'storage',
     permission: PERMISSIONS.DATA_EXPORT,
+  },
+  {
+    path: '/console',
+    label: '控制台',
+    icon: 'console',
+    permission: PERMISSIONS.CONSOLE_ACCESS,
   },
 ];
 
@@ -156,6 +163,10 @@ export function canImportDatabase(role: Role): boolean {
 
 export function canResetDatabase(role: Role): boolean {
   return hasPermission(role, PERMISSIONS.DATA_RESET);
+}
+
+export function canAccessConsole(role: Role): boolean {
+  return hasPermission(role, PERMISSIONS.CONSOLE_ACCESS);
 }
 
 export function canViewAllCapTable(role: Role): boolean {
