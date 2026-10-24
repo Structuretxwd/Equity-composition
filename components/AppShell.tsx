@@ -2,7 +2,7 @@
 // 导航项完全由 lib/rbac.ts 的角色权限决定，不在组件内散写角色判断。
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Avatar,
@@ -12,6 +12,7 @@ import {
   Layout,
   Menu,
   Tag,
+  Tooltip,
 } from '@arco-design/web-react';
 import {
   IconCalendar,
@@ -48,6 +49,94 @@ const ROLE_TAG_COLOR: Record<string, string> = {
   INVESTOR: 'green',
 };
 
+/**
+ * 侧边导航：选中项背后的浮动色块会随路由滑动，
+ * 收起时用 Tooltip 保留可读性，避免只剩图标造成识别困难。
+ */
+function SidebarNav({
+  items,
+  activePath,
+  compact,
+  onNavigate,
+}: {
+  items: NavItem[];
+  activePath?: string;
+  compact: boolean;
+  onNavigate: (path: string) => void;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [pill, setPill] = useState({ top: 0, height: 36, ready: false });
+
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+
+    let frame = 0;
+    const measure = () => {
+      const selected = wrap.querySelector<HTMLElement>(
+        '.arco-menu-item.arco-menu-selected',
+      );
+      if (!selected) {
+        setPill((current) => (current.ready ? { ...current, ready: false } : current));
+        return;
+      }
+      const wrapRect = wrap.getBoundingClientRect();
+      const itemRect = selected.getBoundingClientRect();
+      setPill({
+        top: itemRect.top - wrapRect.top,
+        height: itemRect.height,
+        ready: true,
+      });
+    };
+
+    measure();
+    frame = window.requestAnimationFrame(measure);
+
+    const observer =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(wrap);
+    window.addEventListener('resize', measure);
+    wrap.addEventListener('scroll', measure, true);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+      wrap.removeEventListener('scroll', measure, true);
+    };
+  }, [activePath, compact, items.length]);
+
+  return (
+    <div className="app-nav-wrap" ref={wrapRef} data-compact={compact}>
+      <span
+        className="nav-pill"
+        aria-hidden="true"
+        data-ready={pill.ready}
+        style={{ transform: `translateY(${pill.top}px)`, height: pill.height }}
+      />
+      <Menu
+        className="app-nav"
+        selectedKeys={activePath ? [activePath] : []}
+        onClickMenuItem={(key) => onNavigate(key)}
+      >
+        {items.map((item) => (
+          <Menu.Item key={item.path}>
+            <Tooltip
+              content={item.label}
+              position="right"
+              mini
+              disabled={!compact}
+            >
+              <span className="nav-icon">{NAV_ICONS[item.icon]}</span>
+            </Tooltip>
+            {!compact && <span className="nav-label">{item.label}</span>}
+          </Menu.Item>
+        ))}
+      </Menu>
+    </div>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const session = useSession();
   const pathname = usePathname();
@@ -77,6 +166,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setDrawerVisible(false);
+    const content = document.getElementById('main-content');
+    if (content) content.scrollTop = 0;
   }, [pathname]);
 
   function navigate(path: string) {
@@ -87,24 +178,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   function logout() {
     clearSession();
     router.replace('/login');
-  }
-
-  function renderMenu(mode: 'sider' | 'drawer') {
-    const compact = mode === 'sider' && collapsed;
-    return (
-      <Menu
-        className="app-nav"
-        selectedKeys={activePath ? [activePath] : []}
-        onClickMenuItem={(key) => navigate(key)}
-      >
-        {items.map((item) => (
-          <Menu.Item key={item.path}>
-            <span className="nav-icon">{NAV_ICONS[item.icon]}</span>
-            {!compact && <span>{item.label}</span>}
-          </Menu.Item>
-        ))}
-      </Menu>
-    );
   }
 
   const userMenu = (
@@ -140,7 +213,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )}
           </div>
 
-          {renderMenu('sider')}
+          <SidebarNav
+            items={items}
+            activePath={activePath}
+            compact={collapsed}
+            onNavigate={navigate}
+          />
 
           <div className="app-sider-footer">
             {!collapsed ? (
@@ -163,7 +241,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         onCancel={() => setDrawerVisible(false)}
         title={<span className="drawer-title">股权管理系统</span>}
       >
-        {renderMenu('drawer')}
+        <SidebarNav
+          items={items}
+          activePath={activePath}
+          compact={false}
+          onNavigate={navigate}
+        />
       </Drawer>
 
       <Layout>
@@ -184,6 +267,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             }
             aria-label={isMobile ? '打开导航' : collapsed ? '展开侧边栏' : '收起侧边栏'}
           />
+
+          <span className="app-header-title">{pageTitle}</span>
 
           <div style={{ flex: 1 }} />
           <ThemeToggle />
@@ -210,7 +295,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Layout.Header>
 
         <Layout.Content className="app-content" id="main-content">
-          {children}
+          <div className="page-transition" key={pathname}>
+            {children}
+          </div>
         </Layout.Content>
       </Layout>
     </Layout>
